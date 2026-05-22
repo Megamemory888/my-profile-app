@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 
-// ── Constants ──────────────────────────────────────────────────────────────
 const OFFENCES = ["Aggravated Assault","Armed Robbery","Bribery","Burglary","Counterfeit Operations","Cybercrime","Domestic Violence","Drug Trafficking","Extortion","Fraud","Human Trafficking","Identity Fraud","Illegal Firearm Possession","Insurance Fraud","Kidnapping","Money Laundering","Organized Crime Activity","Smuggling","Tax Evasion","Vehicle Theft"];
 const OCCUPATIONS = ["Accountant","Business Owner","Construction Worker","Dock Worker","Farmer","Fisherman","Hotel Staff","IT Technician","Mechanic","Nightclub Operator","Retail Manager","Security Guard","Taxi Driver","Warehouse Supervisor"];
 const LOCATIONS = ["Ba","Labasa","Lautoka","Levuka","Nadi","Nausori","Rakiraki","Savusavu","Sigatoka","Suva"];
@@ -9,12 +8,12 @@ const BEH = ["Financially motivated offender","Frequent cross-border travel","Hi
 const PSY = ["Avoids direct confrontation when possible","Calculated and methodical","Displays anti-social behaviour patterns","High adaptability","Impulsive under pressure","Manipulative tendencies observed"];
 const RISK_STYLE = { Low:{bg:"#E6F9EC",text:"#1A5C2A",border:"#A3D9B1"}, Moderate:{bg:"#FFF3E0",text:"#7A4500",border:"#F5C07A"}, High:{bg:"#FFF0E6",text:"#7A2E00",border:"#F5A07A"}, Severe:{bg:"#FDEAEA",text:"#7A1A1A",border:"#F0A0A0"} };
 const STATUS_STYLE = { "Wanted":{bg:"#FDEAEA",text:"#8B1A1A",border:"#F0A0A0"}, "In Custody":{bg:"#E6F0FF",text:"#1A3A7A",border:"#A0BDEF"}, "Released on Parole":{bg:"#FFF8E6",text:"#6B4500",border:"#E8C97A"}, "Sentence Completed":{bg:"#E6F9EC",text:"#1A5C2A",border:"#A3D9B1"}, "Under Investigation":{bg:"#F0EDFF",text:"#3A2A8B",border:"#B0A0EF"} };
-
 const inp = { padding:"7px 10px",fontSize:12,borderRadius:8,border:"1px solid #1e2130",background:"#0a0c14",color:"#c0c4d0",fontFamily:"inherit",width:"100%",boxSizing:"border-box" };
 const btnSm = { display:"inline-flex",alignItems:"center",gap:4,padding:"6px 12px",fontSize:12,fontWeight:600,borderRadius:8,border:"1px solid #2a2d38",background:"#1a1d26",color:"#c0c4d0",cursor:"pointer" };
 const btnGreen = { ...btnSm,background:"#39FF8F",color:"#040507",border:"1px solid #39FF8F",fontWeight:700 };
 const btnRed = { ...btnSm,color:"#FF5555",border:"1px solid #3a1a1a",background:"#1a0f0f" };
 
+const btnRed = { ...btnSm,color:"#FF5555",border:"1px solid #3a1a1a",background:"#1a0f0f" };
 function Badge({ label, style:s={} }) {
   return <span style={{display:"inline-flex",alignItems:"center",padding:"2px 9px",borderRadius:99,fontSize:10,fontWeight:600,background:s.bg||"#eee",color:s.text||"#333",border:`1px solid ${s.border||"#ccc"}`,whiteSpace:"nowrap"}}>{label}</span>;
 }
@@ -52,13 +51,13 @@ function ThumbCanvas({ value, onChange }) {
 }
 
 async function uploadFile(dataUrl, folder, id) {
-  if (!dataUrl || dataUrl === "null") return null;
+  if (!dataUrl) return null;
   const res = await fetch(dataUrl);
   const blob = await res.blob();
   const ext = blob.type.includes("png") ? "png" : "jpg";
   const path = `${folder}/${id}.${ext}`;
   const { error } = await supabase.storage.from("biometrics").upload(path, blob, { upsert:true });
-  if (error) return null;
+  if (error) { console.error("Upload error:", error); return null; }
   return supabase.storage.from("biometrics").getPublicUrl(path).data.publicUrl;
 }
 
@@ -73,7 +72,7 @@ function Modal({ record, onSave, onClose, allIds }) {
     associates:record.associates||0, convictions:record.convictions||0,
     behaviour:record.behaviour||BEH[0], psych:record.psych||PSY[0],
     photo_url:record.photo_url||null, thumb_url:record.thumb_url||null,
-    _photoData:null, _thumbData:null,
+    photoData:null, thumbData:null,
   });
   const [saving, setSaving] = useState(false);
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
@@ -85,9 +84,32 @@ function Modal({ record, onSave, onClose, allIds }) {
     const newId = record.id || ("FJ-" + (Math.max(0,...ids)+1));
     let photo_url = f.photo_url;
     let thumb_url = f.thumb_url;
-    if (f._photoData) photo_url = await uploadFile(f._photoData, "photos", newId);
-    if (f._thumbData) thumb_url = await uploadFile(f._thumbData, "thumbs", newId);
-    onSave({ ...f, id:newId, nationality:"Fijian", photo_url, thumb_url });
+    if (f.photoData) photo_url = await uploadFile(f.photoData, "photos", newId);
+    if (f.thumbData) thumb_url = await uploadFile(f.thumbData, "thumbs", newId);
+    // Only send fields that exist in the database - no photoData or thumbData
+    const dbRecord = {
+      id: newId,
+      name: f.name,
+      alias: f.alias,
+      gender: f.gender,
+      dob: f.dob,
+      nationality: "Fijian",
+      location: f.location,
+      occupation: f.occupation,
+      primary_offence: f.primary_offence,
+      secondary_offence: f.secondary_offence,
+      arrest_year: f.arrest_year,
+      sentence: f.sentence,
+      risk: f.risk,
+      status: f.status,
+      associates: f.associates,
+      convictions: f.convictions,
+      behaviour: f.behaviour,
+      psych: f.psych,
+      photo_url: photo_url,
+      thumb_url: thumb_url,
+    };
+    onSave(dbRecord);
     setSaving(false);
   };
 
@@ -107,7 +129,6 @@ function Modal({ record, onSave, onClose, allIds }) {
           <button onClick={onClose} style={btnSm}>✕</button>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"14px 18px",display:"flex",flexDirection:"column",gap:14}}>
-          {/* Biometrics */}
           <div>
             <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>Biometric Data</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
@@ -115,19 +136,18 @@ function Modal({ record, onSave, onClose, allIds }) {
                 <div style={{fontSize:10,color:"#555",marginBottom:6,textTransform:"uppercase",fontWeight:600}}>Photo</div>
                 <label style={{display:"block",cursor:"pointer"}}>
                   <div style={{border:"1px dashed #2a2d38",borderRadius:10,padding:10,textAlign:"center",minHeight:90,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}>
-                    {(f._photoData||f.photo_url) ? <img src={f._photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:"2px solid #39FF8F"}}/> : <><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:"#555"}}>Click to upload</div></>}
+                    {(f.photoData||f.photo_url) ? <img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:"2px solid #39FF8F"}}/> : <><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:"#555"}}>Click to upload</div></>}
                   </div>
-                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const fl=e.target.files[0];if(!fl)return;const fr=new FileReader();fr.onload=ev=>set("_photoData",ev.target.result);fr.readAsDataURL(fl);}}/>
+                  <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const fl=e.target.files[0];if(!fl)return;const fr=new FileReader();fr.onload=ev=>set("photoData",ev.target.result);fr.readAsDataURL(fl);}}/>
                 </label>
-                {(f._photoData||f.photo_url)&&<button onClick={()=>{set("_photoData",null);set("photo_url",null);}} style={{...btnSm,marginTop:6,width:"100%",justifyContent:"center"}}>Remove</button>}
+                {(f.photoData||f.photo_url)&&<button onClick={()=>{set("photoData",null);set("photo_url",null);}} style={{...btnSm,marginTop:6,width:"100%",justifyContent:"center"}}>Remove</button>}
               </div>
               <div>
                 <div style={{fontSize:10,color:"#555",marginBottom:6,textTransform:"uppercase",fontWeight:600}}>Thumbprint</div>
-                <ThumbCanvas value={f.thumb_url} onChange={v=>set("_thumbData",v)}/>
+                <ThumbCanvas value={f.thumb_url} onChange={v=>set("thumbData",v)}/>
               </div>
             </div>
           </div>
-          {/* Personal */}
           <div>
             <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>Personal Details</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -136,7 +156,6 @@ function Modal({ record, onSave, onClose, allIds }) {
               {fg("Location","location","text",LOCATIONS)} {fg("Occupation","occupation","text",OCCUPATIONS)}
             </div>
           </div>
-          {/* Criminal */}
           <div>
             <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>Criminal Record</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -151,7 +170,7 @@ function Modal({ record, onSave, onClose, allIds }) {
         </div>
         <div style={{padding:"10px 18px",borderTop:"1px solid #1e2130",display:"flex",gap:8,justifyContent:"flex-end"}}>
           <button onClick={onClose} style={btnSm}>Cancel</button>
-          <button onClick={save} style={btnGreen} disabled={saving}>{saving?"Saving…":isNew?"Add Profile":"Save Changes"}</button>
+          <button onClick={save} style={btnGreen} disabled={saving}>{saving?"Saving...":isNew?"Add Profile":"Save Changes"}</button>
         </div>
       </div>
     </div>
@@ -177,7 +196,8 @@ export default function App() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("criminal_profiles").select("*").order("created_at", { ascending:false });
+    const { data, error } = await supabase.from("criminal_profiles").select("*").order("created_at", { ascending:false });
+    if (error) console.error("Load error:", error);
     setDb(data||[]);
     setLoading(false);
   };
@@ -206,21 +226,27 @@ export default function App() {
   const saveRecord = async (form) => {
     const isNew = !modal.record.id;
     if (isNew) {
-      await supabase.from("criminal_profiles").insert([form]);
+      const { error } = await supabase.from("criminal_profiles").insert([form]);
+      if (error) { console.error("Insert error:", error); showToast("❌ Error: " + error.message); return; }
       showToast("✅ Profile added!");
     } else {
-      await supabase.from("criminal_profiles").update(form).eq("id", modal.record.id);
+      const { error } = await supabase.from("criminal_profiles").update(form).eq("id", modal.record.id);
+      if (error) { console.error("Update error:", error); showToast("❌ Error: " + error.message); return; }
       showToast("✅ Profile updated!");
     }
-    setModal(null); setSelId(form.id);
+    setModal(null);
+    setSelId(form.id);
+    load();
   };
 
   const deleteRecord = async (id) => {
     const r = db.find(x=>x.id===id);
     if (!r||!confirm(`Delete ${r.name}?`)) return;
-    await supabase.from("criminal_profiles").delete().eq("id",id);
+    const { error } = await supabase.from("criminal_profiles").delete().eq("id",id);
+    if (error) { showToast("❌ Error deleting"); return; }
     if (selId===id) setSelId(null);
     showToast("🗑 Profile deleted.");
+    load();
   };
 
   const sel = db.find(r=>r.id===selId)||null;
@@ -237,7 +263,6 @@ export default function App() {
       {toast && <div style={{position:"fixed",bottom:20,right:20,background:"#39FF8F",color:"#040507",padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:12,zIndex:200,boxShadow:"0 8px 24px rgba(57,255,143,0.3)"}}>{toast}</div>}
       {modal && <Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
 
-      {/* Nav */}
       <div style={{display:"flex",alignItems:"center",padding:"0 20px",height:52,borderBottom:"1px solid #1a1f2e",background:"#070910",position:"sticky",top:0,zIndex:50,gap:12}}>
         <span style={{fontSize:18}}>🛡️</span>
         <span style={{fontSize:15,fontWeight:700,color:"#e0e4f0"}}>Criminal Intelligence</span>
@@ -246,7 +271,6 @@ export default function App() {
         <button onClick={()=>setModal({record:{}})} style={btnGreen}>+ New Profile</button>
       </div>
 
-      {/* KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderBottom:"1px solid #1a1f2e"}}>
         {[{l:"Wanted",v:wanted,c:"#FF5555"},{l:"In Custody",v:inCustody,c:"#5B9CF6"},{l:"Severe Risk",v:severe,c:"#FF9055"},{l:"Photos Filed",v:withPhoto,c:"#39FF8F"},{l:"Avg Sentence",v:`${avgSen}y`,c:"#A78BFA"}].map(k=>(
           <div key={k.l} style={{padding:"12px 16px",borderRight:"1px solid #1a1f2e"}}>
@@ -256,9 +280,8 @@ export default function App() {
         ))}
       </div>
 
-      {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 16px",borderBottom:"1px solid #1a1f2e",background:"#09010c",flexWrap:"wrap"}}>
-        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="🔍 Search name, alias, ID…" style={{...inp,width:200,height:30,fontSize:12}}/>
+        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="🔍 Search name, alias, ID..." style={{...inp,width:200,height:30,fontSize:12}}/>
         {[
           {v:fRisk,s:setFRisk,opts:["All Risk","Low","Moderate","High","Severe"]},
           {v:fStatus,s:setFStatus,opts:["All Statuses","Wanted","In Custody","Released on Parole","Sentence Completed","Under Investigation"]},
@@ -280,11 +303,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Body */}
       <div style={{display:"flex",height:"calc(100vh - 52px - 58px - 48px)"}}>
         <div style={{flex:1,overflow:"auto"}}>
           {loading ? (
-            <div style={{padding:48,textAlign:"center",color:"#39FF8F",fontSize:14}}>Loading profiles…</div>
+            <div style={{padding:48,textAlign:"center",color:"#39FF8F",fontSize:14}}>Loading profiles...</div>
           ) : filtered.length===0 ? (
             <div style={{padding:48,textAlign:"center",color:"#333"}}>🔎 No profiles found.</div>
           ) : view==="table" ? (
@@ -312,8 +334,8 @@ export default function App() {
                     <td style={{padding:"7px 10px",color:"#444",fontFamily:"monospace",fontSize:11}}>{r.arrest_year}</td>
                     <td style={{padding:"7px 8px"}}>
                       <div style={{display:"flex",gap:2}}>
-                        <button onClick={e=>{e.stopPropagation();setModal({record:r});}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}} title="Edit">✏️</button>
-                        <button onClick={e=>{e.stopPropagation();deleteRecord(r.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}} title="Delete">🗑</button>
+                        <button onClick={e=>{e.stopPropagation();setModal({record:r});}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}}>✏️</button>
+                        <button onClick={e=>{e.stopPropagation();deleteRecord(r.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}}>🗑</button>
                       </div>
                     </td>
                   </tr>
@@ -342,12 +364,11 @@ export default function App() {
           )}
         </div>
 
-        {/* Detail Panel */}
         <div style={{width:255,borderLeft:"1px solid #1a1f2e",background:"#080a12",flexShrink:0,overflowY:"auto"}}>
           {!sel ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",color:"#333",gap:8,padding:20}}>
               <div style={{fontSize:36}}>🔍</div>
-              <p style={{fontSize:12,textAlign:"center",color:"#444",lineHeight:1.6}}>Select a profile<br/>to view details</p>
+              <p style={{fontSize:12,textAlign:"center",color:"#444",lineHeight:1.6}}>Select a profile to view details</p>
             </div>
           ) : (
             <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
@@ -391,7 +412,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Footer */}
       <div style={{display:"flex",alignItems:"center",padding:"6px 16px",borderTop:"1px solid #1a1f2e",background:"#070910",gap:14,flexWrap:"wrap"}}>
         <span style={{fontSize:11,color:"#333",fontFamily:"monospace"}}>{filtered.length} of {db.length} profiles</span>
         <span style={{fontSize:11,color:"#333",fontFamily:"monospace"}}>{filtered.filter(r=>r.status==="Wanted").length} wanted in view</span>
