@@ -11,7 +11,6 @@ const STATUS_STYLE = { "Wanted":{bg:"#FDEAEA",text:"#8B1A1A",border:"#F0A0A0"}, 
 const inp = { padding:"7px 10px",fontSize:12,borderRadius:8,border:"1px solid #1e2130",background:"#0a0c14",color:"#c0c4d0",fontFamily:"inherit",width:"100%",boxSizing:"border-box" };
 const btnSm = { display:"inline-flex",alignItems:"center",gap:4,padding:"6px 12px",fontSize:12,fontWeight:600,borderRadius:8,border:"1px solid #2a2d38",background:"#1a1d26",color:"#c0c4d0",cursor:"pointer" };
 const btnGreen = { ...btnSm,background:"#39FF8F",color:"#040507",border:"1px solid #39FF8F",fontWeight:700 };
-const btnRed = { ...btnSm,color:"#FF5555",border:"1px solid #3a1a1a",background:"#1a0f0f" };
 
 const btnRed = { ...btnSm,color:"#FF5555",border:"1px solid #3a1a1a",background:"#1a0f0f" };
 function Badge({ label, style:s={} }) {
