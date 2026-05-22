@@ -11,8 +11,8 @@ const STATUS_STYLE = { "Wanted":{bg:"#FDEAEA",text:"#8B1A1A",border:"#F0A0A0"}, 
 const inp = { padding:"7px 10px",fontSize:12,borderRadius:8,border:"1px solid #1e2130",background:"#0a0c14",color:"#c0c4d0",fontFamily:"inherit",width:"100%",boxSizing:"border-box" };
 const btnSm = { display:"inline-flex",alignItems:"center",gap:4,padding:"6px 12px",fontSize:12,fontWeight:600,borderRadius:8,border:"1px solid #2a2d38",background:"#1a1d26",color:"#c0c4d0",cursor:"pointer" };
 const btnGreen = { ...btnSm,background:"#39FF8F",color:"#040507",border:"1px solid #39FF8F",fontWeight:700 };
-
 const btnRed = { ...btnSm,color:"#FF5555",border:"1px solid #3a1a1a",background:"#1a0f0f" };
+
 function Badge({ label, style:s={} }) {
   return <span style={{display:"inline-flex",alignItems:"center",padding:"2px 9px",borderRadius:99,fontSize:10,fontWeight:600,background:s.bg||"#eee",color:s.text||"#333",border:`1px solid ${s.border||"#ccc"}`,whiteSpace:"nowrap"}}>{label}</span>;
 }
@@ -60,6 +60,48 @@ async function uploadFile(dataUrl, folder, id) {
   return supabase.storage.from("biometrics").getPublicUrl(path).data.publicUrl;
 }
 
+function LoginPage({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {
+    if (!email || !password) { setError("Please enter email and password"); return; }
+    setLoading(true); setError("");
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { setError("Incorrect email or password"); setLoading(false); return; }
+    onLogin();
+    setLoading(false);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:"#070910",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif"}}>
+      <div style={{background:"#0d0f18",border:"1px solid #1e2130",borderRadius:16,padding:32,width:340,boxShadow:"0 24px 80px rgba(0,0,0,0.8)"}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:36,marginBottom:8}}>🛡️</div>
+          <div style={{fontSize:18,fontWeight:700,color:"#e0e4f0"}}>Criminal Intelligence</div>
+          <div style={{fontSize:11,color:"#444",marginTop:4}}>Admin access only</div>
+        </div>
+        {error && <div style={{background:"#1a0f0f",border:"1px solid #3a1a1a",color:"#FF5555",padding:"8px 12px",borderRadius:8,fontSize:12,marginBottom:16}}>{error}</div>}
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <label style={{fontSize:10,fontWeight:600,color:"#555",textTransform:"uppercase",letterSpacing:"0.08em"}}>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="your@email.com" style={inp}/>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:4}}>
+            <label style={{fontSize:10,fontWeight:600,color:"#555",textTransform:"uppercase",letterSpacing:"0.08em"}}>Password</label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="••••••••" style={inp}/>
+          </div>
+          <button onClick={login} style={{...btnGreen,justifyContent:"center",marginTop:8,padding:"10px"}} disabled={loading}>
+            {loading?"Signing in...":"Sign In"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Modal({ record, onSave, onClose, allIds }) {
   const isNew = !record.id;
   const [f, setF] = useState({
@@ -85,28 +127,13 @@ function Modal({ record, onSave, onClose, allIds }) {
     let thumb_url = f.thumb_url;
     if (f.photoData) photo_url = await uploadFile(f.photoData, "photos", newId);
     if (f.thumbData) thumb_url = await uploadFile(f.thumbData, "thumbs", newId);
-    // Only send fields that exist in the database - no photoData or thumbData
     const dbRecord = {
-      id: newId,
-      name: f.name,
-      alias: f.alias,
-      gender: f.gender,
-      dob: f.dob,
-      nationality: "Fijian",
-      location: f.location,
-      occupation: f.occupation,
-      primary_offence: f.primary_offence,
-      secondary_offence: f.secondary_offence,
-      arrest_year: f.arrest_year,
-      sentence: f.sentence,
-      risk: f.risk,
-      status: f.status,
-      associates: f.associates,
-      convictions: f.convictions,
-      behaviour: f.behaviour,
-      psych: f.psych,
-      photo_url: photo_url,
-      thumb_url: thumb_url,
+      id:newId, name:f.name, alias:f.alias, gender:f.gender, dob:f.dob,
+      nationality:"Fijian", location:f.location, occupation:f.occupation,
+      primary_offence:f.primary_offence, secondary_offence:f.secondary_offence,
+      arrest_year:f.arrest_year, sentence:f.sentence, risk:f.risk, status:f.status,
+      associates:f.associates, convictions:f.convictions, behaviour:f.behaviour,
+      psych:f.psych, photo_url, thumb_url,
     };
     onSave(dbRecord);
     setSaving(false);
@@ -135,7 +162,7 @@ function Modal({ record, onSave, onClose, allIds }) {
                 <div style={{fontSize:10,color:"#555",marginBottom:6,textTransform:"uppercase",fontWeight:600}}>Photo</div>
                 <label style={{display:"block",cursor:"pointer"}}>
                   <div style={{border:"1px dashed #2a2d38",borderRadius:10,padding:10,textAlign:"center",minHeight:90,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}>
-                    {(f.photoData||f.photo_url) ? <img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:"2px solid #39FF8F"}}/> : <><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:"#555"}}>Click to upload</div></>}
+                    {(f.photoData||f.photo_url)?<img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:"2px solid #39FF8F"}}/>:<><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:"#555"}}>Click to upload</div></>}
                   </div>
                   <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const fl=e.target.files[0];if(!fl)return;const fr=new FileReader();fr.onload=ev=>set("photoData",ev.target.result);fr.readAsDataURL(fl);}}/>
                 </label>
@@ -177,6 +204,8 @@ function Modal({ record, onSave, onClose, allIds }) {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [db, setDb] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -192,6 +221,23 @@ export default function App() {
   const [toast, setToast] = useState("");
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""), 2800); };
+
+  // Check if user is logged in
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    showToast("Logged out.");
+  };
 
   const load = async () => {
     setLoading(true);
@@ -226,26 +272,23 @@ export default function App() {
     const isNew = !modal.record.id;
     if (isNew) {
       const { error } = await supabase.from("criminal_profiles").insert([form]);
-      if (error) { console.error("Insert error:", error); showToast("❌ Error: " + error.message); return; }
-      showToast("✅ Profile added!");
+      if (error) { showToast("Error: " + error.message); return; }
+      showToast("Profile added!");
     } else {
       const { error } = await supabase.from("criminal_profiles").update(form).eq("id", modal.record.id);
-      if (error) { console.error("Update error:", error); showToast("❌ Error: " + error.message); return; }
-      showToast("✅ Profile updated!");
+      if (error) { showToast("Error: " + error.message); return; }
+      showToast("Profile updated!");
     }
-    setModal(null);
-    setSelId(form.id);
-    load();
+    setModal(null); setSelId(form.id); load();
   };
 
   const deleteRecord = async (id) => {
     const r = db.find(x=>x.id===id);
     if (!r||!confirm(`Delete ${r.name}?`)) return;
     const { error } = await supabase.from("criminal_profiles").delete().eq("id",id);
-    if (error) { showToast("❌ Error deleting"); return; }
+    if (error) { showToast("Error deleting"); return; }
     if (selId===id) setSelId(null);
-    showToast("🗑 Profile deleted.");
-    load();
+    showToast("Profile deleted."); load();
   };
 
   const sel = db.find(r=>r.id===selId)||null;
@@ -255,21 +298,36 @@ export default function App() {
   const withPhoto = db.filter(r=>r.photo_url).length;
   const avgSen = db.length ? Math.round(db.reduce((s,r)=>s+(r.sentence||0),0)/db.length) : 0;
 
+  if (authLoading) return <div style={{minHeight:"100vh",background:"#070910",display:"flex",alignItems:"center",justifyContent:"center",color:"#39FF8F",fontFamily:"sans-serif"}}>Loading...</div>;
+
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif",background:"#070910",minHeight:"100vh",color:"#c0c4d0"}}>
       <style>{`*{box-sizing:border-box} ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:#1e2130;border-radius:4px} .rh:hover{background:#0f1220!important} .rs{background:#0d1424!important} .ch:hover{border-color:#39FF8F!important} select option{background:#0d0f18}`}</style>
 
       {toast && <div style={{position:"fixed",bottom:20,right:20,background:"#39FF8F",color:"#040507",padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:12,zIndex:200,boxShadow:"0 8px 24px rgba(57,255,143,0.3)"}}>{toast}</div>}
-      {modal && <Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
+      {modal && user && <Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
 
+      {/* Nav */}
       <div style={{display:"flex",alignItems:"center",padding:"0 20px",height:52,borderBottom:"1px solid #1a1f2e",background:"#070910",position:"sticky",top:0,zIndex:50,gap:12}}>
         <span style={{fontSize:18}}>🛡️</span>
         <span style={{fontSize:15,fontWeight:700,color:"#e0e4f0"}}>Criminal Intelligence</span>
         <span style={{fontSize:10,background:"rgba(57,255,143,0.12)",color:"#39FF8F",padding:"2px 8px",borderRadius:99,fontWeight:700,border:"1px solid rgba(57,255,143,0.2)"}}>FJ·2026</span>
         <div style={{flex:1}}/>
-        <button onClick={()=>setModal({record:{}})} style={btnGreen}>+ New Profile</button>
+        {user ? (
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontSize:11,color:"#555"}}>👤 {user.email}</span>
+            <button onClick={logout} style={btnSm}>Log out</button>
+            <button onClick={()=>setModal({record:{}})} style={btnGreen}>+ New Profile</button>
+          </div>
+        ) : (
+          <button onClick={()=>setModal({record:null, isLogin:true})} style={btnGreen}>🔐 Admin Login</button>
+        )}
       </div>
 
+      {/* Login modal - shown when not logged in and login button clicked */}
+      {modal?.isLogin && <LoginPage onLogin={()=>{ setModal(null); showToast("Welcome back!"); }} />}
+
+      {/* KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderBottom:"1px solid #1a1f2e"}}>
         {[{l:"Wanted",v:wanted,c:"#FF5555"},{l:"In Custody",v:inCustody,c:"#5B9CF6"},{l:"Severe Risk",v:severe,c:"#FF9055"},{l:"Photos Filed",v:withPhoto,c:"#39FF8F"},{l:"Avg Sentence",v:`${avgSen}y`,c:"#A78BFA"}].map(k=>(
           <div key={k.l} style={{padding:"12px 16px",borderRight:"1px solid #1a1f2e"}}>
@@ -279,6 +337,7 @@ export default function App() {
         ))}
       </div>
 
+      {/* Toolbar */}
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 16px",borderBottom:"1px solid #1a1f2e",background:"#09010c",flexWrap:"wrap"}}>
         <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="🔍 Search name, alias, ID..." style={{...inp,width:200,height:30,fontSize:12}}/>
         {[
@@ -302,6 +361,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* Body */}
       <div style={{display:"flex",height:"calc(100vh - 52px - 58px - 48px)"}}>
         <div style={{flex:1,overflow:"auto"}}>
           {loading ? (
@@ -332,10 +392,12 @@ export default function App() {
                     <td style={{padding:"7px 10px",color:"#666"}}>{r.location}</td>
                     <td style={{padding:"7px 10px",color:"#444",fontFamily:"monospace",fontSize:11}}>{r.arrest_year}</td>
                     <td style={{padding:"7px 8px"}}>
-                      <div style={{display:"flex",gap:2}}>
-                        <button onClick={e=>{e.stopPropagation();setModal({record:r});}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}}>✏️</button>
-                        <button onClick={e=>{e.stopPropagation();deleteRecord(r.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}}>🗑</button>
-                      </div>
+                      {user && (
+                        <div style={{display:"flex",gap:2}}>
+                          <button onClick={e=>{e.stopPropagation();setModal({record:r});}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}}>✏️</button>
+                          <button onClick={e=>{e.stopPropagation();deleteRecord(r.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"3px 5px",color:"#555",borderRadius:4,fontSize:13}}>🗑</button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -363,6 +425,7 @@ export default function App() {
           )}
         </div>
 
+        {/* Detail Panel */}
         <div style={{width:255,borderLeft:"1px solid #1a1f2e",background:"#080a12",flexShrink:0,overflowY:"auto"}}>
           {!sel ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",color:"#333",gap:8,padding:20}}>
@@ -384,7 +447,7 @@ export default function App() {
                   <Badge label={`${sel.risk} Risk`} style={RISK_STYLE[sel.risk]}/><Badge label={sel.status} style={STATUS_STYLE[sel.status]}/>
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"#0a0c14",borderRadius:8,border:"1px solid #1a1f2e"}}>
-                  {sel.thumb_url ? <img src={sel.thumb_url} alt="thumb" style={{width:40,height:40,borderRadius:6,objectFit:"cover",border:"1px solid rgba(57,255,143,0.3)"}}/> : <div style={{width:40,height:40,borderRadius:6,background:"#0f1117",border:"1px dashed #2a2d38",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🖐</div>}
+                  {sel.thumb_url?<img src={sel.thumb_url} alt="thumb" style={{width:40,height:40,borderRadius:6,objectFit:"cover",border:"1px solid rgba(57,255,143,0.3)"}}/>:<div style={{width:40,height:40,borderRadius:6,background:"#0f1117",border:"1px dashed #2a2d38",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>🖐</div>}
                   <div style={{fontSize:10,color:"#555",lineHeight:1.6}}>
                     <div style={{color:sel.thumb_url?"#39FF8F":"#444",fontWeight:600}}>{sel.thumb_url?"✓ Thumbprint on file":"No thumbprint"}</div>
                     <div>{sel.photo_url?"✓ Photo on file":"No photo"}</div>
@@ -402,15 +465,18 @@ export default function App() {
                 <div style={{fontSize:11,color:"#666",lineHeight:1.5}}>{sel.behaviour}</div>
                 <div style={{fontSize:11,color:"#444",fontStyle:"italic",lineHeight:1.5}}>{sel.psych}</div>
               </div>
-              <div style={{padding:"8px 13px",borderTop:"1px solid #1a1f2e",display:"flex",gap:6}}>
-                <button onClick={()=>setModal({record:sel})} style={{...btnGreen,flex:1,justifyContent:"center"}}>Edit</button>
-                <button onClick={()=>deleteRecord(sel.id)} style={{...btnRed,flex:1,justifyContent:"center"}}>Delete</button>
-              </div>
+              {user && (
+                <div style={{padding:"8px 13px",borderTop:"1px solid #1a1f2e",display:"flex",gap:6}}>
+                  <button onClick={()=>setModal({record:sel})} style={{...btnGreen,flex:1,justifyContent:"center"}}>Edit</button>
+                  <button onClick={()=>deleteRecord(sel.id)} style={{...btnRed,flex:1,justifyContent:"center"}}>Delete</button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
 
+      {/* Footer */}
       <div style={{display:"flex",alignItems:"center",padding:"6px 16px",borderTop:"1px solid #1a1f2e",background:"#070910",gap:14,flexWrap:"wrap"}}>
         <span style={{fontSize:11,color:"#333",fontFamily:"monospace"}}>{filtered.length} of {db.length} profiles</span>
         <span style={{fontSize:11,color:"#333",fontFamily:"monospace"}}>{filtered.filter(r=>r.status==="Wanted").length} wanted in view</span>
@@ -419,5 +485,4 @@ export default function App() {
       </div>
     </div>
   );
-} 
- 
+}
