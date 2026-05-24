@@ -133,7 +133,7 @@ function LoginPage({ onLogin }) {
         <div style={{textAlign:"center",marginBottom:28}}>
           <div style={{width:52,height:52,borderRadius:12,background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:22}}>🛡️</div>
           <div style={{fontSize:20,fontWeight:700,color:C.text}}>Criminal Intelligence</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:4}}>Fiji Police Administration System</div>
+          <div style={{fontSize:12,color:C.text3,marginTop:4}}>Fiji Central Criminal Intelligence System</div>
         </div>
         {error && <div style={{background:"#FDEAEA",border:"1px solid #F0A0A0",color:"#7A1A1A",padding:"8px 12px",borderRadius:6,fontSize:12,marginBottom:16}}>{error}</div>}
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -406,7 +406,7 @@ export default function App() {
         <div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🛡️</div>
         <div>
           <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>Criminal Intelligence System</div>
-          <div style={{fontSize:10,color:C.navMuted}}>Fiji Police Administration</div>
+          <div style={{fontSize:10,color:C.navMuted}}>Fiji Central Criminal Intelligence</div>
         </div>
         <div style={{flex:1}}/>
         {user ? (
