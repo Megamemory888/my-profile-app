@@ -65,16 +65,13 @@ function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const login = async () => {
     if (!email || !password) { setError("Please enter email and password"); return; }
     setLoading(true); setError("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) { setError("Incorrect email or password"); setLoading(false); return; }
-    onLogin();
-    setLoading(false);
+    onLogin(); setLoading(false);
   };
-
   return (
     <div style={{minHeight:"100vh",background:"#070910",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'DM Sans',sans-serif"}}>
       <div style={{background:"#0d0f18",border:"1px solid #1e2130",borderRadius:16,padding:32,width:340,boxShadow:"0 24px 80px rgba(0,0,0,0.8)"}}>
@@ -102,6 +99,10 @@ function LoginPage({ onLogin }) {
   );
 }
 
+function SectionLabel({ children }) {
+  return <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>{children}</div>;
+}
+
 function Modal({ record, onSave, onClose, allIds }) {
   const isNew = !record.id;
   const [f, setF] = useState({
@@ -113,6 +114,13 @@ function Modal({ record, onSave, onClose, allIds }) {
     associates:record.associates||0, convictions:record.convictions||0,
     behaviour:record.behaviour||BEH[0], psych:record.psych||PSY[0],
     photo_url:record.photo_url||null, thumb_url:record.thumb_url||null,
+    home_address:record.home_address||"",
+    phone_number:record.phone_number||"",
+    vehicle_registration:record.vehicle_registration||"",
+    family_members:record.family_members||"",
+    medical_conditions:record.medical_conditions||"",
+    release_date:record.release_date||"",
+    case_notes:record.case_notes||"",
     photoData:null, thumbData:null,
   });
   const [saving, setSaving] = useState(false);
@@ -134,29 +142,39 @@ function Modal({ record, onSave, onClose, allIds }) {
       arrest_year:f.arrest_year, sentence:f.sentence, risk:f.risk, status:f.status,
       associates:f.associates, convictions:f.convictions, behaviour:f.behaviour,
       psych:f.psych, photo_url, thumb_url,
+      home_address:f.home_address, phone_number:f.phone_number,
+      vehicle_registration:f.vehicle_registration, family_members:f.family_members,
+      medical_conditions:f.medical_conditions, release_date:f.release_date,
+      case_notes:f.case_notes,
     };
     onSave(dbRecord);
     setSaving(false);
   };
 
-  const fg=(label,key,type="text",opts=null)=>(
-    <div style={{display:"flex",flexDirection:"column",gap:3}}>
+  const fg=(label,key,type="text",opts=null,full=false,area=false)=>(
+    <div style={{display:"flex",flexDirection:"column",gap:3,gridColumn:full?"1/-1":"auto"}}>
       <label style={{fontSize:10,fontWeight:600,color:"#555",textTransform:"uppercase",letterSpacing:"0.08em"}}>{label}</label>
-      {opts ? <select value={f[key]} onChange={e=>set(key,e.target.value)} style={inp}>{opts.map(o=><option key={o}>{o}</option>)}</select>
-             : <input type={type} value={f[key]} onChange={e=>set(key,type==="number"?Number(e.target.value):e.target.value)} style={inp}/>}
+      {area
+        ? <textarea value={f[key]} onChange={e=>set(key,e.target.value)} rows={3} style={{...inp,resize:"vertical"}}/>
+        : opts
+          ? <select value={f[key]} onChange={e=>set(key,e.target.value)} style={inp}>{opts.map(o=><option key={o}>{o}</option>)}</select>
+          : <input type={type} value={f[key]} onChange={e=>set(key,type==="number"?Number(e.target.value):e.target.value)} style={inp}/>
+      }
     </div>
   );
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:100,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px 10px",backdropFilter:"blur(4px)"}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:"#0d0f18",border:"1px solid #1e2130",borderRadius:16,width:540,maxHeight:"88vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,0.9)"}}>
+      <div style={{background:"#0d0f18",border:"1px solid #1e2130",borderRadius:16,width:560,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 24px 80px rgba(0,0,0,0.9)"}}>
         <div style={{padding:"14px 18px",borderBottom:"1px solid #1e2130",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <span style={{fontSize:14,fontWeight:700,color:"#e0e4f0"}}>{isNew?"New Profile":"Edit Profile"}</span>
           <button onClick={onClose} style={btnSm}>✕</button>
         </div>
-        <div style={{overflowY:"auto",flex:1,padding:"14px 18px",display:"flex",flexDirection:"column",gap:14}}>
+        <div style={{overflowY:"auto",flex:1,padding:"14px 18px",display:"flex",flexDirection:"column",gap:16}}>
+
+          {/* Biometrics */}
           <div>
-            <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>Biometric Data</div>
+            <SectionLabel>Biometric Data</SectionLabel>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               <div>
                 <div style={{fontSize:10,color:"#555",marginBottom:6,textTransform:"uppercase",fontWeight:600}}>Photo</div>
@@ -174,25 +192,56 @@ function Modal({ record, onSave, onClose, allIds }) {
               </div>
             </div>
           </div>
+
+          {/* Personal */}
           <div>
-            <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>Personal Details</div>
+            <SectionLabel>Personal Details</SectionLabel>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {fg("Full Name *","name")} {fg("Alias","alias")}
-              {fg("Gender","gender","text",["Male","Female"])} {fg("Date of Birth","dob","date")}
-              {fg("Location","location","text",LOCATIONS)} {fg("Occupation","occupation","text",OCCUPATIONS)}
+              {fg("Full Name *","name",undefined,undefined,false)}
+              {fg("Alias","alias")}
+              {fg("Gender","gender","text",["Male","Female"])}
+              {fg("Date of Birth","dob","date")}
+              {fg("Location","location","text",LOCATIONS)}
+              {fg("Occupation","occupation","text",OCCUPATIONS)}
+              {fg("📞 Phone Number","phone_number")}
+              {fg("🚗 Vehicle Registration","vehicle_registration")}
+              {fg("🏠 Home Address","home_address","text",null,true)}
             </div>
           </div>
+
+          {/* Criminal Record */}
           <div>
-            <div style={{fontSize:10,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:8,borderBottom:"1px solid #1a1f2e",paddingBottom:6}}>Criminal Record</div>
+            <SectionLabel>Criminal Record</SectionLabel>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              {fg("Primary Offence","primary_offence","text",OFFENCES)} {fg("Secondary Offence","secondary_offence","text",OFFENCES)}
-              {fg("Arrest Year","arrest_year","number")} {fg("Sentence (years)","sentence","number")}
-              {fg("Risk Level","risk","text",["Low","Moderate","High","Severe"])} {fg("Status","status","text",["Wanted","In Custody","Released on Parole","Sentence Completed","Under Investigation"])}
-              {fg("Associates","associates","number")} {fg("Convictions","convictions","number")}
-              <div style={{gridColumn:"1/-1"}}>{fg("Behavioural Notes","behaviour","text",BEH)}</div>
-              <div style={{gridColumn:"1/-1"}}>{fg("Psychological Profile","psych","text",PSY)}</div>
+              {fg("Primary Offence","primary_offence","text",OFFENCES)}
+              {fg("Secondary Offence","secondary_offence","text",OFFENCES)}
+              {fg("Arrest Year","arrest_year","number")}
+              {fg("Sentence (years)","sentence","number")}
+              {fg("Risk Level","risk","text",["Low","Moderate","High","Severe"])}
+              {fg("Status","status","text",["Wanted","In Custody","Released on Parole","Sentence Completed","Under Investigation"])}
+              {fg("Associates","associates","number")}
+              {fg("Convictions","convictions","number")}
+              {fg("📅 Release Date","release_date","date")}
+              <div style={{gridColumn:"1/-1"}}>{fg("Behavioural Notes","behaviour","text",BEH,true)}</div>
+              <div style={{gridColumn:"1/-1"}}>{fg("Psychological Profile","psych","text",PSY,true)}</div>
             </div>
           </div>
+
+          {/* Extra Info */}
+          <div>
+            <SectionLabel>Additional Information</SectionLabel>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {fg("👨‍👩‍👧 Family Members","family_members","text",null,false,false)}
+              {fg("🏥 Medical Conditions","medical_conditions","text",null,false,false)}
+              <div style={{gridColumn:"1/-1"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:3}}>
+                  <label style={{fontSize:10,fontWeight:600,color:"#555",textTransform:"uppercase",letterSpacing:"0.08em"}}>📝 Case Notes</label>
+                  <textarea value={f.case_notes} onChange={e=>set("case_notes",e.target.value)} rows={4} placeholder="Enter detailed case notes here..." style={{...inp,resize:"vertical"}}/>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
         <div style={{padding:"10px 18px",borderTop:"1px solid #1e2130",display:"flex",gap:8,justifyContent:"flex-end"}}>
           <button onClick={onClose} style={btnSm}>Cancel</button>
@@ -222,7 +271,6 @@ export default function App() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""), 2800); };
 
-  // Check if user is logged in
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -234,10 +282,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    showToast("Logged out.");
-  };
+  const logout = async () => { await supabase.auth.signOut(); showToast("Logged out."); };
 
   const load = async () => {
     setLoading(true);
@@ -273,11 +318,11 @@ export default function App() {
     if (isNew) {
       const { error } = await supabase.from("criminal_profiles").insert([form]);
       if (error) { showToast("Error: " + error.message); return; }
-      showToast("Profile added!");
+      showToast("✅ Profile added!");
     } else {
       const { error } = await supabase.from("criminal_profiles").update(form).eq("id", modal.record.id);
       if (error) { showToast("Error: " + error.message); return; }
-      showToast("Profile updated!");
+      showToast("✅ Profile updated!");
     }
     setModal(null); setSelId(form.id); load();
   };
@@ -288,7 +333,7 @@ export default function App() {
     const { error } = await supabase.from("criminal_profiles").delete().eq("id",id);
     if (error) { showToast("Error deleting"); return; }
     if (selId===id) setSelId(null);
-    showToast("Profile deleted."); load();
+    showToast("🗑 Profile deleted."); load();
   };
 
   const sel = db.find(r=>r.id===selId)||null;
@@ -305,7 +350,8 @@ export default function App() {
       <style>{`*{box-sizing:border-box} ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:#1e2130;border-radius:4px} .rh:hover{background:#0f1220!important} .rs{background:#0d1424!important} .ch:hover{border-color:#39FF8F!important} select option{background:#0d0f18}`}</style>
 
       {toast && <div style={{position:"fixed",bottom:20,right:20,background:"#39FF8F",color:"#040507",padding:"10px 18px",borderRadius:10,fontWeight:700,fontSize:12,zIndex:200,boxShadow:"0 8px 24px rgba(57,255,143,0.3)"}}>{toast}</div>}
-      {modal && user && <Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
+      {modal && !modal.isLogin && user && <Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
+      {modal?.isLogin && <LoginPage onLogin={()=>{ setModal(null); showToast("Welcome back!"); }} />}
 
       {/* Nav */}
       <div style={{display:"flex",alignItems:"center",padding:"0 20px",height:52,borderBottom:"1px solid #1a1f2e",background:"#070910",position:"sticky",top:0,zIndex:50,gap:12}}>
@@ -320,12 +366,9 @@ export default function App() {
             <button onClick={()=>setModal({record:{}})} style={btnGreen}>+ New Profile</button>
           </div>
         ) : (
-          <button onClick={()=>setModal({record:null, isLogin:true})} style={btnGreen}>🔐 Admin Login</button>
+          <button onClick={()=>setModal({isLogin:true})} style={btnGreen}>🔐 Admin Login</button>
         )}
       </div>
-
-      {/* Login modal - shown when not logged in and login button clicked */}
-      {modal?.isLogin && <LoginPage onLogin={()=>{ setModal(null); showToast("Welcome back!"); }} />}
 
       {/* KPIs */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",borderBottom:"1px solid #1a1f2e"}}>
@@ -426,14 +469,14 @@ export default function App() {
         </div>
 
         {/* Detail Panel */}
-        <div style={{width:255,borderLeft:"1px solid #1a1f2e",background:"#080a12",flexShrink:0,overflowY:"auto"}}>
+        <div style={{width:270,borderLeft:"1px solid #1a1f2e",background:"#080a12",flexShrink:0,overflowY:"auto"}}>
           {!sel ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",color:"#333",gap:8,padding:20}}>
               <div style={{fontSize:36}}>🔍</div>
               <p style={{fontSize:12,textAlign:"center",color:"#444",lineHeight:1.6}}>Select a profile to view details</p>
             </div>
           ) : (
-            <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+            <div style={{display:"flex",flexDirection:"column"}}>
               <div style={{padding:"14px 13px",borderBottom:"1px solid #1a1f2e"}}>
                 <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:10}}>
                   <Avatar r={sel} size={50}/>
@@ -454,19 +497,40 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <div style={{padding:"8px 13px",flex:1,display:"flex",flexDirection:"column",gap:5}}>
-                {[["Date of birth",sel.dob],["Gender",sel.gender],["Nationality",sel.nationality],["Primary offence",sel.primary_offence],["Secondary offence",sel.secondary_offence],["Arrest year",sel.arrest_year],["Sentence",`${sel.sentence} years`],["Location",sel.location],["Associates",sel.associates],["Convictions",sel.convictions]].map(([l,v])=>(
+
+              <div style={{padding:"8px 13px",display:"flex",flexDirection:"column",gap:5}}>
+                {/* Personal */}
+                <div style={{fontSize:9,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",margin:"6px 0 4px",borderBottom:"1px solid #1a1f2e",paddingBottom:4}}>Personal</div>
+                {[["Date of birth",sel.dob],["Gender",sel.gender],["Nationality",sel.nationality],["📞 Phone",sel.phone_number],["🏠 Address",sel.home_address],["🚗 Vehicle",sel.vehicle_registration],["👨‍👩‍👧 Family",sel.family_members],["🏥 Medical",sel.medical_conditions]].map(([l,v])=> v ? (
                   <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:11,gap:8}}>
                     <span style={{color:"#444",flexShrink:0}}>{l}</span>
-                    <span style={{fontWeight:600,color:"#888",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:140}}>{v}</span>
+                    <span style={{fontWeight:600,color:"#888",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:150}}>{v}</span>
                   </div>
-                ))}
-                <div style={{height:0.5,background:"#1a1f2e",margin:"4px 0"}}/>
+                ) : null)}
+
+                {/* Criminal */}
+                <div style={{fontSize:9,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",margin:"6px 0 4px",borderBottom:"1px solid #1a1f2e",paddingBottom:4}}>Criminal Record</div>
+                {[["Primary offence",sel.primary_offence],["Secondary offence",sel.secondary_offence],["Arrest year",sel.arrest_year],["Sentence",`${sel.sentence} years`],["📅 Release date",sel.release_date],["Location",sel.location],["Associates",sel.associates],["Convictions",sel.convictions]].map(([l,v])=> v ? (
+                  <div key={l} style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",fontSize:11,gap:8}}>
+                    <span style={{color:"#444",flexShrink:0}}>{l}</span>
+                    <span style={{fontWeight:600,color:"#888",textAlign:"right",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:150}}>{v}</span>
+                  </div>
+                ) : null)}
+
+                {/* Profile */}
+                <div style={{fontSize:9,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",margin:"6px 0 4px",borderBottom:"1px solid #1a1f2e",paddingBottom:4}}>Profile</div>
                 <div style={{fontSize:11,color:"#666",lineHeight:1.5}}>{sel.behaviour}</div>
                 <div style={{fontSize:11,color:"#444",fontStyle:"italic",lineHeight:1.5}}>{sel.psych}</div>
+
+                {/* Case Notes */}
+                {sel.case_notes && <>
+                  <div style={{fontSize:9,fontWeight:700,color:"#39FF8F",letterSpacing:"0.1em",textTransform:"uppercase",margin:"6px 0 4px",borderBottom:"1px solid #1a1f2e",paddingBottom:4}}>📝 Case Notes</div>
+                  <div style={{fontSize:11,color:"#888",lineHeight:1.6,background:"#0a0c14",padding:"8px 10px",borderRadius:8,border:"1px solid #1a1f2e",whiteSpace:"pre-wrap"}}>{sel.case_notes}</div>
+                </>}
               </div>
+
               {user && (
-                <div style={{padding:"8px 13px",borderTop:"1px solid #1a1f2e",display:"flex",gap:6}}>
+                <div style={{padding:"8px 13px",borderTop:"1px solid #1a1f2e",display:"flex",gap:6,marginTop:8}}>
                   <button onClick={()=>setModal({record:sel})} style={{...btnGreen,flex:1,justifyContent:"center"}}>Edit</button>
                   <button onClick={()=>deleteRecord(sel.id)} style={{...btnRed,flex:1,justifyContent:"center"}}>Delete</button>
                 </div>
