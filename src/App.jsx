@@ -672,7 +672,8 @@ export default function App() {
     const{data:{subscription}}=supabase.auth.onAuthStateChange((_e,session)=>{
       const u=session?.user??null;
       setUser(u);
-      fetchRole(u);
+      if(u) setAuthLoading(true);
+      fetchRole(u).finally(()=>setAuthLoading(false));
     });
     return()=>subscription.unsubscribe();
   },[]);
