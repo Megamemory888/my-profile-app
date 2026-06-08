@@ -210,7 +210,7 @@ function printProfiles(profiles) {
           ${r.case_notes?`<div class="section"><div class="section-title">Case Notes</div><div class="case-notes">${r.case_notes}</div></div>`:""}
           ${r.associates_list&&r.associates_list.length>0?`<div class="section"><div class="section-title">Known Associates (${r.associates_list.length})</div><div class="grid2" style="padding:10px 14px">${r.associates_list.map(a=>`<div class="field"><span class="label">${a.relationship_type}</span><span class="value">${a.name} (${a.id})</span></div>`).join("")}</div></div>`:""}
         </div>
-        <div class="card-footer"><span>CONFIDENTIAL — Fiji Central Criminal Intelligence</span><span>Printed: ${now}</span></div>
+        <div class="card-footer"><span>CONFIDENTIAL — National Criminal Intelligence Centre</span><span>Printed: ${now}</span></div>
       </div>`;
   }).join("");
 
@@ -233,7 +233,7 @@ function printProfiles(profiles) {
   .card-footer{background:#f4f5f7;padding:8px 20px;display:flex;justify-content:space-between;font-size:10px;color:#7b8794;border-top:1px solid #dde1e9}
   @media print{body{background:white}.profile-card{margin:0;border-radius:0;box-shadow:none}.no-print{display:none!important}}</style></head>
   <body>
-  <div class="cover"><div style="font-size:32px;margin-bottom:12px">🛡️</div><div class="cover-title">Criminal Intelligence Report</div><div class="cover-sub">Fiji Central Criminal Intelligence — CONFIDENTIAL</div>
+  <div class="cover"><div style="font-size:32px;margin-bottom:12px">🛡️</div><div class="cover-title">Criminal Intelligence Report</div><div class="cover-sub">National Criminal Intelligence Centre — CONFIDENTIAL</div>
   <div class="cover-meta">
     <div class="cover-meta-item"><b>${profiles.length}</b>Profile${profiles.length!==1?"s":""}</div>
     <div class="cover-meta-item"><b>${now}</b>Date printed</div>
@@ -289,9 +289,9 @@ function LoginPage({ onLogin }) {
           </svg>
 
           <div style={{fontSize:11,fontWeight:700,color:"#F87171",letterSpacing:"0.22em",textTransform:"uppercase",marginBottom:10}}>CLASSIFIED</div>
-          <div style={{fontSize:28,fontWeight:700,color:"#fff",lineHeight:1.2,letterSpacing:"0.01em",marginBottom:6}}>Fiji Central Criminal<br/>Intelligence System</div>
+          <div style={{fontSize:28,fontWeight:700,color:"#fff",lineHeight:1.2,letterSpacing:"0.01em",marginBottom:6}}>National Criminal<br/>Intelligence Centre</div>
           <div style={{width:48,height:2,background:"#2A5EC4",margin:"14px auto",borderRadius:2}}/>
-          <div style={{fontSize:13,color:"rgba(255,255,255,0.45)",letterSpacing:"0.08em",textTransform:"uppercase"}}>FCIS · Secure Access Portal</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.45)",letterSpacing:"0.08em",textTransform:"uppercase"}}>NCIC · Secure Access Portal</div>
 
           <div style={{marginTop:48,display:"flex",flexDirection:"column",gap:10}}>
             {[
@@ -335,7 +335,7 @@ function LoginPage({ onLogin }) {
               <label style={{fontSize:11,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.07em"}}>Email Address</label>
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
                 onKeyDown={e=>e.key==="Enter"&&login()}
-                placeholder="officer@police.gov.fj"
+                placeholder="user@ncic.gov"
                 style={{padding:"10px 12px",fontSize:13,borderRadius:4,border:"1px solid #BFC5D5",background:"#fff",color:"#0F172A",fontFamily:"inherit",width:"100%",outline:"none"}}/>
             </div>
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
@@ -362,7 +362,7 @@ function LoginPage({ onLogin }) {
         </div>
 
         <div style={{position:"absolute",bottom:20,left:40,right:40,textAlign:"center"}}>
-          <div style={{fontSize:10,color:"#9CA3AF",letterSpacing:"0.04em"}}>Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
+          <div style={{fontSize:10,color:"#9CA3AF",letterSpacing:"0.04em"}}>Unauthorised access is strictly prohibited and may result in criminal prosecution.</div>
         </div>
       </div>
     </div>
@@ -955,12 +955,12 @@ export default function App() {
         <div style={{display:"flex",alignItems:"center",gap:10,borderRight:"1px solid rgba(255,255,255,0.12)",paddingRight:16}}>
           <div style={{width:36,height:36,borderRadius:4,background:"rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,border:"1px solid rgba(255,255,255,0.15)"}}>🛡️</div>
           <div>
-            <div style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:"0.02em",lineHeight:1.2}}>FCIS</div>
+            <div style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:"0.02em",lineHeight:1.2}}>NCIC</div>
             <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",letterSpacing:"0.06em",textTransform:"uppercase"}}>Criminal Intelligence</div>
           </div>
         </div>
         <div>
-          <div style={{fontSize:14,fontWeight:600,color:"#fff",letterSpacing:"0.01em"}}>Fiji Central Criminal Intelligence System</div>
+          <div style={{fontSize:14,fontWeight:600,color:"#fff",letterSpacing:"0.01em"}}>National Criminal Intelligence Centre System</div>
           <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",letterSpacing:"0.04em"}}>SECURE DATABASE — FY2026</div>
         </div>
         <div style={{flex:1}}/>
@@ -1278,7 +1278,7 @@ export default function App() {
         <span style={{fontSize:10,color:"rgba(255,255,255,0.4)",letterSpacing:"0.04em"}}>{filtered.length} profiles · {wanted} wanted · {severe} severe risk · {foreignCount} foreign nationals · {deporteeCount} deportees</span>
         {selected.size>0&&<span style={{fontSize:10,color:"#60A5FA",fontWeight:600,letterSpacing:"0.04em"}}>{selected.size} selected</span>}
         <div style={{flex:1}}/>
-        <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:"0.06em",textTransform:"uppercase"}}>Fiji Central Criminal Intelligence · FY2026 · CONFIDENTIAL</span>
+        <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:"0.06em",textTransform:"uppercase"}}>NCIC · National Criminal Intelligence Centre · FY2026 · CONFIDENTIAL</span>
       </div>
     </div>
   );

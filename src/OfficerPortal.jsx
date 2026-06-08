@@ -642,7 +642,7 @@ export default function OfficerPortal({ user, officer, onLogout }) {
         <div style={{ display:"flex", alignItems:"center", gap:10, borderRight:"1px solid rgba(255,255,255,0.12)", paddingRight:16 }}>
           <div style={{ width:36, height:36, borderRadius:4, background:"rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, border:"1px solid rgba(255,255,255,0.15)" }}>🛡️</div>
           <div>
-            <div style={{ fontSize:13, fontWeight:700, color:"#fff", letterSpacing:"0.02em" }}>FCIS</div>
+            <div style={{ fontSize:13, fontWeight:700, color:"#fff", letterSpacing:"0.02em" }}>NCIC</div>
             <div style={{ fontSize:9, color:"rgba(255,255,255,0.4)", letterSpacing:"0.06em", textTransform:"uppercase" }}>Officer Portal</div>
           </div>
         </div>
@@ -738,7 +738,7 @@ export default function OfficerPortal({ user, officer, onLogout }) {
 
       {/* Footer */}
       <div style={{ display:"flex", alignItems:"center", padding:"7px 24px", background:C.nav, borderTop:`2px solid ${C.border}`, marginTop:24 }}>
-        <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase" }}>Fiji Central Criminal Intelligence · Officer Portal · FY2026 · CONFIDENTIAL</span>
+        <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase" }}>NCIC · National Criminal Intelligence Centre · Officer Portal · FY2026 · CONFIDENTIAL</span>
       </div>
     </div>
   );
