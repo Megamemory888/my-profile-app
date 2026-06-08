@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
-import OfficerPortal from "./OfficerPortal";
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const OFFENCES = ["Aggravated Assault","Armed Robbery","Bribery","Burglary","Counterfeit Operations","Cybercrime","Domestic Violence","Drug Trafficking","Extortion","Fraud","Human Trafficking","Identity Fraud","Illegal Firearm Possession","Insurance Fraud","Kidnapping","Money Laundering","Organized Crime Activity","Smuggling","Tax Evasion","Vehicle Theft"];
@@ -257,41 +256,88 @@ function LoginPage({onLogin}) {
     if(err){setError("Incorrect email or password");setLoading(false);return;}
     onLogin();setLoading(false);
   };
+  const features=[
+    {icon:"🗂️",title:"Criminal Profiles",desc:"Centralised database of persons of interest, suspects and known offenders across Fiji."},
+    {icon:"🌏",title:"Foreign Nationals",desc:"Track foreign nationals, immigration status, visa overstays and deportation records."},
+    {icon:"🔗",title:"Associate Networks",desc:"Map relationships between individuals, gang affiliations and organised crime networks."},
+    {icon:"📊",title:"Intelligence Reports",desc:"Risk assessments, behavioural analysis and operational intelligence in one place."},
+  ];
   return (
-    <div style={{minHeight:"100vh",background:"#0F2044",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
-      {/* Background pattern */}
-      <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,rgba(255,255,255,0.02) 0px,rgba(255,255,255,0.02) 1px,transparent 1px,transparent 40px),repeating-linear-gradient(90deg,rgba(255,255,255,0.02) 0px,rgba(255,255,255,0.02) 1px,transparent 1px,transparent 40px)",pointerEvents:"none"}}/>
-      {/* Classification banner */}
-      <div style={{position:"absolute",top:0,left:0,right:0,background:"#B91C1C",color:"#fff",textAlign:"center",padding:"6px",fontSize:11,fontWeight:700,letterSpacing:"0.15em"}}>
-        RESTRICTED — AUTHORISED PERSONNEL ONLY
+    <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
+      {/* Top classification banner */}
+      <div style={{background:"#B91C1C",color:"#fff",textAlign:"center",padding:"7px",fontSize:11,fontWeight:700,letterSpacing:"0.15em",flexShrink:0}}>
+        RESTRICTED — AUTHORISED PERSONNEL ONLY — NCIC CLASSIFIED SYSTEM
       </div>
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:32,width:"100%",maxWidth:420,padding:"0 24px",zIndex:1}}>
-        {/* Logo */}
-        <div style={{textAlign:"center"}}>
-          <div style={{width:72,height:72,borderRadius:16,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:32}}>🛡️</div>
-          <div style={{fontSize:22,fontWeight:700,color:"#fff",letterSpacing:"0.02em"}}>NCIC Intelligence System</div>
-          <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginTop:6,letterSpacing:"0.08em",textTransform:"uppercase"}}>National Criminal Intelligence Centre · Fiji</div>
-        </div>
-        {/* Card */}
-        <div style={{background:"rgba(255,255,255,0.05)",backdropFilter:"blur(12px)",borderRadius:12,padding:"32px 28px",width:"100%",border:"1px solid rgba(255,255,255,0.12)",boxShadow:"0 8px 40px rgba(0,0,0,0.4)"}}>
-          <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.7)",textAlign:"center",marginBottom:24,letterSpacing:"0.05em",textTransform:"uppercase"}}>Secure Login</div>
-          {error&&<div style={{background:"rgba(185,28,28,0.3)",border:"1px solid rgba(248,113,113,0.4)",color:"#FCA5A5",padding:"8px 12px",borderRadius:6,fontSize:12,marginBottom:16}}>{error}</div>}
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
-            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-              <label style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Email Address</label>
-              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="officer@ncic.gov.fj" style={{...inp,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"10px 12px"}}/>
+      <div style={{flex:1,display:"flex"}}>
+        {/* LEFT PANEL — branding + info */}
+        <div style={{flex:"0 0 55%",background:"#0F2044",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"52px 56px",position:"relative",overflow:"hidden"}}>
+          {/* Grid pattern */}
+          <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,rgba(255,255,255,0.025) 0,rgba(255,255,255,0.025) 1px,transparent 1px,transparent 48px),repeating-linear-gradient(90deg,rgba(255,255,255,0.025) 0,rgba(255,255,255,0.025) 1px,transparent 1px,transparent 48px)",pointerEvents:"none"}}/>
+          {/* Glow */}
+          <div style={{position:"absolute",top:-120,left:-120,width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(26,86,219,0.18) 0%,transparent 70%)",pointerEvents:"none"}}/>
+          <div style={{position:"relative",zIndex:1}}>
+            {/* Logo */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:52}}>
+              <div style={{width:56,height:56,borderRadius:14,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>🛡️</div>
+              <div>
+                <div style={{fontSize:18,fontWeight:700,color:"#fff",letterSpacing:"0.01em",lineHeight:1.2}}>NCIC Intelligence System</div>
+                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginTop:3}}>National Criminal Intelligence Centre</div>
+              </div>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:5}}>
-              <label style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.5)",textTransform:"uppercase",letterSpacing:"0.1em"}}>Password</label>
-              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="••••••••" style={{...inp,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"#fff",padding:"10px 12px"}}/>
+            {/* Headline */}
+            <div style={{fontSize:32,fontWeight:700,color:"#fff",lineHeight:1.25,marginBottom:16,maxWidth:440}}>
+              Fiji's Central Criminal Intelligence Platform
             </div>
-            <button onClick={login} style={{background:"#1A56DB",color:"#fff",border:"none",borderRadius:7,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.04em",marginTop:4}} disabled={loading}>
-              {loading?"AUTHENTICATING...":"SIGN IN"}
-            </button>
+            <div style={{fontSize:14,color:"rgba(255,255,255,0.55)",lineHeight:1.7,maxWidth:420,marginBottom:48}}>
+              A secure, role-based intelligence management system for authorised law enforcement personnel of the National Criminal Intelligence Centre.
+            </div>
+            {/* Features */}
+            <div style={{display:"flex",flexDirection:"column",gap:20}}>
+              {features.map((f,i)=>(
+                <div key={i} style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                  <div style={{width:36,height:36,borderRadius:9,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{f.icon}</div>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.9)",marginBottom:3}}>{f.title}</div>
+                    <div style={{fontSize:12,color:"rgba(255,255,255,0.4)",lineHeight:1.5}}>{f.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Footer */}
+          <div style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>© 2025 NCIC · Fiji Police Force</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)",letterSpacing:"0.05em"}}>SYSTEM VERSION 2.4</div>
           </div>
         </div>
-        <div style={{fontSize:11,color:"rgba(255,255,255,0.25)",textAlign:"center",letterSpacing:"0.05em"}}>
-          Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.
+
+        {/* RIGHT PANEL — login form */}
+        <div style={{flex:1,background:"#F4F5F7",display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px"}}>
+          <div style={{width:"100%",maxWidth:380}}>
+            <div style={{marginBottom:36}}>
+              <div style={{fontSize:22,fontWeight:700,color:"#1A1D23",marginBottom:8}}>Secure Sign In</div>
+              <div style={{fontSize:13,color:"#7B8794"}}>Enter your credentials to access the system.</div>
+            </div>
+            {error&&<div style={{background:"#FDEAEA",border:"1px solid #F0A0A0",color:"#7A1A1A",padding:"10px 14px",borderRadius:7,fontSize:12,marginBottom:20}}>{error}</div>}
+            <div style={{display:"flex",flexDirection:"column",gap:18}}>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#4A5568",textTransform:"uppercase",letterSpacing:"0.07em"}}>Email Address</label>
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="you@ncic.gov.fj" style={{padding:"11px 13px",fontSize:13,borderRadius:7,border:"1px solid #DDE1E9",background:"#fff",color:"#1A1D23",fontFamily:"inherit",width:"100%",boxSizing:"border-box",outline:"none"}}/>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#4A5568",textTransform:"uppercase",letterSpacing:"0.07em"}}>Password</label>
+                <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="••••••••" style={{padding:"11px 13px",fontSize:13,borderRadius:7,border:"1px solid #DDE1E9",background:"#fff",color:"#1A1D23",fontFamily:"inherit",width:"100%",boxSizing:"border-box",outline:"none"}}/>
+              </div>
+              <button onClick={login} disabled={loading} style={{background:"#1C2B4A",color:"#fff",border:"none",borderRadius:7,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.05em",marginTop:4,opacity:loading?0.7:1}}>
+                {loading?"AUTHENTICATING...":"SIGN IN"}
+              </button>
+            </div>
+            <div style={{marginTop:28,padding:"16px",background:"#FFF8E6",border:"1px solid #FDE68A",borderRadius:7}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#92400E",letterSpacing:"0.06em",marginBottom:4}}>⚠ AUTHORISED ACCESS ONLY</div>
+              <div style={{fontSize:11,color:"#92400E",lineHeight:1.5}}>This system contains classified law enforcement data. Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -596,7 +642,6 @@ function Modal({record,onSave,onClose,allIds}) {
 // ─── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [user,setUser]=useState(null);const [authLoading,setAuthLoading]=useState(true);
-  const [userRole,setUserRole]=useState(null);
   const [db,setDb]=useState([]);const [loading,setLoading]=useState(true);
   const [query,setQuery]=useState("");const [fRisk,setFRisk]=useState("");
   const [fStatus,setFStatus]=useState("");const [fLocation,setFLocation]=useState("");
@@ -608,23 +653,9 @@ export default function App() {
 
   const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(""),2800);};
 
-  const fetchRole=async(u)=>{
-    if(!u){setUserRole(null);return;}
-    const{data}=await supabase.from("user_roles").select("role").eq("user_id",u.id).single();
-    setUserRole(data?.role||"officer");
-  };
-
   useEffect(()=>{
-    supabase.auth.getSession().then(({data:{session}})=>{
-      const u=session?.user??null;
-      setUser(u);
-      fetchRole(u).finally(()=>setAuthLoading(false));
-    });
-    const{data:{subscription}}=supabase.auth.onAuthStateChange((_e,session)=>{
-      const u=session?.user??null;
-      setUser(u);
-      fetchRole(u);
-    });
+    supabase.auth.getSession().then(({data:{session}})=>{setUser(session?.user??null);setAuthLoading(false);});
+    const{data:{subscription}}=supabase.auth.onAuthStateChange((_e,session)=>setUser(session?.user??null));
     return()=>subscription.unsubscribe();
   },[]);
 
@@ -688,9 +719,6 @@ export default function App() {
   if(authLoading)return <div style={{minHeight:"100vh",background:"#0F2044",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.6)",fontSize:13,letterSpacing:"0.08em"}}>AUTHENTICATING...</div>;
 
   if(!user)return <LoginPage onLogin={()=>{}} />;
-
-  if(userRole==="officer"){
-    return <OfficerPortal user={user} onLogout={async()=>{await supabase.auth.signOut();}}/>;
   }
 
   const DPRow=({label,value,icon})=>!value?null:(
