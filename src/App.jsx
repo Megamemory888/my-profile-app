@@ -69,13 +69,15 @@ const STATUS_STYLE = {
 };
 
 const C = {
-  bg:"#F4F5F7", surface:"#FFFFFF", surface2:"#F0F2F5",
-  nav:"#1C2B4A", navText:"#FFFFFF", navMuted:"rgba(255,255,255,0.55)",
-  border:"#DDE1E9", border2:"#C8CDD8",
-  text:"#1A1D23", text2:"#4A5568", text3:"#7B8794",
-  accent:"#1A56DB", accentL:"#EBF2FF",
-  green:"#1E7E34", greenL:"#EAF3DE",
-  orange:"#B45309", orangeL:"#FAEEDA",
+  bg:"#EDEEF2", surface:"#FFFFFF", surface2:"#F3F4F8",
+  nav:"#0F2044", navText:"#FFFFFF", navMuted:"rgba(255,255,255,0.5)",
+  navAccent:"#1A3A6B",
+  border:"#D8DCE8", border2:"#BFC5D5",
+  text:"#0F172A", text2:"#374151", text3:"#6B7280",
+  accent:"#1447C4", accentL:"#E8EFFD",
+  green:"#166534", greenL:"#DCFCE7",
+  orange:"#92400E", orangeL:"#FEF3C7",
+  classified:"#7C0000",
 };
 
 const inp = { padding:"7px 10px",fontSize:12,borderRadius:6,border:`1px solid ${C.border2}`,background:C.surface,color:C.text,fontFamily:"inherit",width:"100%",boxSizing:"border-box" };
@@ -93,8 +95,8 @@ function Badge({ label, style:s={} }) {
 function Avatar({ r, size=40 }) {
   const ini = r.name?.split(" ").slice(0,2).map(w=>w[0]||"").join("").toUpperCase();
   const rs = RISK_STYLE[r.risk]||{};
-  if (r.photo_url) return <img src={r.photo_url} alt="" style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",border:`2px solid ${rs.border||C.border}`,flexShrink:0}} />;
-  return <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,background:rs.bg||C.accentL,color:rs.text||C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.3),fontWeight:600,border:`2px solid ${rs.border||C.border}`,letterSpacing:"0.05em"}}>{ini}</div>;
+  if (r.photo_url) return <img src={r.photo_url} alt="" style={{width:size,height:size,borderRadius:3,objectFit:"cover",border:`2px solid ${rs.border||C.border}`,flexShrink:0}} />;
+  return <div style={{width:size,height:size,borderRadius:3,flexShrink:0,background:rs.bg||C.accentL,color:rs.text||C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.3),fontWeight:700,border:`2px solid ${rs.border||C.border}`,letterSpacing:"0.05em"}}>{ini}</div>;
 }
 
 function ThumbCanvas({ value, onChange }) {
@@ -217,8 +219,8 @@ function printProfiles(profiles) {
   .cover-meta{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.2);display:flex;gap:40px}.cover-meta-item{font-size:12px}.cover-meta-item b{display:block;font-size:20px;font-weight:700;margin-bottom:2px}
   .profile-card{background:white;margin:0 24px 24px;border-radius:10px;overflow:hidden;border:1px solid #dde1e9;page-break-after:always;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
   .card-header{background:#1C2B4A;padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-start}
-  .header-left{display:flex;gap:14px;align-items:flex-start}.photo{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)}
-  .initials{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.15);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+  .header-left{display:flex;gap:14px;align-items:flex-start}.photo{width:64px;height:64px;border-radius:4px;object-fit:cover;border:2px solid rgba(255,255,255,0.3)}
+  .initials{width:64px;height:64px;border-radius:4px;background:rgba(255,255,255,0.15);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
   .profile-id{font-size:10px;color:rgba(255,255,255,0.6);font-family:monospace}.profile-name{font-size:18px;font-weight:700;color:white}.profile-sub{font-size:12px;color:rgba(255,255,255,0.65);margin-top:3px}
   .header-badges{display:flex;flex-direction:column;gap:5px;align-items:flex-end}.badge{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
   .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}.tag-intl{background:#E6F1FB;color:#042C53}.tag-deportee{background:#FAEEDA;color:#412402}.tag-gang{background:#FDEAEA;color:#7A1A1A}
@@ -260,11 +262,12 @@ function LoginPage({ onLogin }) {
     onLogin();setLoading(false);
   };
   return (
-    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{background:C.surface,borderRadius:12,padding:"36px 32px",width:360,boxShadow:"0 4px 24px rgba(0,0,0,0.08)",border:`1px solid ${C.border}`}}>
+    <div style={{minHeight:"100vh",background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",backgroundImage:"linear-gradient(135deg,#0F2044 0%,#1A3A6B 100%)"}}>
+      <div style={{background:C.surface,borderRadius:6,padding:"40px 36px",width:380,boxShadow:"0 20px 60px rgba(0,0,0,0.4)",border:`1px solid ${C.border}`}}>
         <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{width:52,height:52,borderRadius:12,background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:22}}>🛡️</div>
-          <div style={{fontSize:20,fontWeight:700,color:C.text}}>Criminal Intelligence</div>
+          <div style={{width:56,height:56,borderRadius:4,background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:24,border:"3px solid #2A5EC4"}}>🛡️</div>
+          <div style={{fontSize:11,fontWeight:700,color:C.classified,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:8}}>CLASSIFIED</div>
+          <div style={{fontSize:20,fontWeight:700,color:C.text,letterSpacing:"0.01em"}}>Criminal Intelligence System</div>
           <div style={{fontSize:12,color:C.text3,marginTop:4}}>Fiji Central Criminal Intelligence</div>
         </div>
         {error&&<div style={{background:"#FDEAEA",border:"1px solid #F0A0A0",color:"#7A1A1A",padding:"8px 12px",borderRadius:6,fontSize:12,marginBottom:16}}>{error}</div>}
@@ -531,7 +534,7 @@ function Modal({ record, onSave, onClose, allIds }) {
                 <div style={{fontSize:11,fontWeight:600,color:C.text2,marginBottom:8}}>Profile photo</div>
                 <label style={{display:"block",cursor:"pointer"}}>
                   <div style={{border:`1.5px dashed ${C.border2}`,borderRadius:8,padding:12,textAlign:"center",minHeight:90,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,background:C.surface2}}>
-                    {(f.photoData||f.photo_url)?<img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:`2px solid ${C.accent}`}}/>:<><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:C.text3}}>Click to upload</div></>}
+                    {(f.photoData||f.photo_url)?<img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:3,objectFit:"cover",border:`2px solid ${C.accent}`}}/>:<><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:C.text3}}>Click to upload</div></>}
                   </div>
                   <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const fl=e.target.files[0];if(!fl)return;const fr=new FileReader();fr.onload=ev=>set("photoData",ev.target.result);fr.readAsDataURL(fl);}}/>
                 </label>
@@ -811,51 +814,66 @@ export default function App() {
   );
 
   return (
-    <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
-      <style>{`*{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:${C.border2};border-radius:4px} .rh:hover{background:#EBF2FF!important} .rs-row{background:#EBF2FF!important;border-left:3px solid ${C.accent}!important} .sel-row{background:#F0F7FF!important} .ch:hover{border-color:${C.accent}!important} input[type=checkbox]{cursor:pointer;width:15px;height:15px;accent-color:${C.accent}}`}</style>
+    <div style={{fontFamily:"'Inter',system-ui,-apple-system,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:${C.border2};border-radius:4px} .rh:hover{background:#EAF0FC!important} .rs-row{background:#DDE9F8!important;border-left:3px solid ${C.accent}!important} .sel-row{background:#EEF4FB!important} .ch:hover{border-color:${C.accent}!important} input[type=checkbox]{cursor:pointer;width:15px;height:15px;accent-color:${C.accent}}`}</style>
 
-      {toast&&<div style={{position:"fixed",bottom:20,right:20,background:C.nav,color:"#fff",padding:"10px 18px",borderRadius:8,fontWeight:500,fontSize:13,zIndex:200,boxShadow:"0 4px 16px rgba(0,0,0,0.2)"}}>{toast}</div>}
+      {toast&&<div style={{position:"fixed",bottom:24,right:24,background:"#0F2044",color:"#fff",padding:"11px 20px",borderRadius:6,fontWeight:500,fontSize:13,zIndex:200,boxShadow:"0 6px 20px rgba(0,0,0,0.25)",letterSpacing:"0.01em",border:"1px solid rgba(255,255,255,0.1)"}}>{toast}</div>}
       {modal&&!modal.isLogin&&user&&<Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
       {modal?.isLogin&&<LoginPage onLogin={()=>{setModal(null);showToast("Welcome back!");}}/>}
 
+      {/* Classification Banner */}
+      <div style={{background:"#7C0000",padding:"3px 24px",display:"flex",alignItems:"center",justifyContent:"center",gap:16,position:"sticky",top:0,zIndex:51}}>
+        <span style={{fontSize:10,fontWeight:700,color:"#fff",letterSpacing:"0.18em",textTransform:"uppercase"}}>⚠ CLASSIFIED — AUTHORISED PERSONNEL ONLY ⚠</span>
+      </div>
+
       {/* Nav */}
-      <div style={{display:"flex",alignItems:"center",padding:"0 24px",height:56,background:C.nav,gap:12,position:"sticky",top:0,zIndex:50}}>
-        <div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🛡️</div>
+      <div style={{display:"flex",alignItems:"center",padding:"0 24px",height:58,background:C.nav,gap:14,position:"sticky",top:22,zIndex:50,borderBottom:"3px solid #2A5EC4"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,borderRight:"1px solid rgba(255,255,255,0.12)",paddingRight:16}}>
+          <div style={{width:36,height:36,borderRadius:4,background:"rgba(255,255,255,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,border:"1px solid rgba(255,255,255,0.15)"}}>🛡️</div>
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:"#fff",letterSpacing:"0.02em",lineHeight:1.2}}>FCIS</div>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.45)",letterSpacing:"0.06em",textTransform:"uppercase"}}>Criminal Intelligence</div>
+          </div>
+        </div>
         <div>
-          <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>Criminal Intelligence System</div>
-          <div style={{fontSize:10,color:C.navMuted}}>Fiji Central Criminal Intelligence</div>
+          <div style={{fontSize:14,fontWeight:600,color:"#fff",letterSpacing:"0.01em"}}>Fiji Central Criminal Intelligence System</div>
+          <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",letterSpacing:"0.04em"}}>SECURE DATABASE — FY2026</div>
         </div>
         <div style={{flex:1}}/>
         {user?(
           <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:11,color:C.navMuted}}><span style={{color:"rgba(255,255,255,0.4)",marginRight:4}}>Logged in:</span>{user.email}</div>
-            <button onClick={logout} style={{...btnSm,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",color:"#fff"}}>Sign out</button>
-            <button onClick={()=>setModal({record:{}})} style={{...btnBlue,background:"#2563EB",border:"1px solid #1D4ED8"}}>+ New profile</button>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",borderRight:"1px solid rgba(255,255,255,0.12)",paddingRight:10}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:10,marginRight:4,letterSpacing:"0.05em",textTransform:"uppercase"}}>User:</span>{user.email}</div>
+            <button onClick={logout} style={{...btnSm,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.75)",fontSize:11}}>Sign out</button>
+            <button onClick={()=>setModal({record:{}})} style={{...btnBlue,background:"#1A56DB",border:"1px solid #1447C4",fontSize:12,fontWeight:600,padding:"7px 16px"}}>+ New Profile</button>
           </div>
         ):(
-          <button onClick={()=>setModal({isLogin:true})} style={{...btnSm,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",color:"#fff"}}>🔐 Admin login</button>
+          <button onClick={()=>setModal({isLogin:true})} style={{...btnSm,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",color:"#fff",fontSize:11}}>🔐 Admin Login</button>
         )}
       </div>
 
-      {/* KPIs — Row 1 */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",background:C.surface,borderBottom:`1px solid ${C.border}`}}>
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",background:C.nav,borderBottom:`1px solid rgba(255,255,255,0.06)`}}>
+        <div style={{padding:"10px 16px",borderRight:"1px solid rgba(255,255,255,0.08)"}}>
+          <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:2}}>Total Profiles</div>
+          <div style={{fontSize:24,fontWeight:700,color:"#fff",letterSpacing:"-0.02em"}}>{db.length}</div>
+        </div>
         {[
-          {l:"Wanted",       v:wanted,        c:"#7A1A1A", bg:"#FDEAEA", icon:"🔴"},
-          {l:"In Custody",   v:inCustody,     c:"#042C53", bg:"#E6F1FB", icon:"🔵"},
-          {l:"Severe Risk",  v:severe,        c:"#4A1B0C", bg:"#FAECE7", icon:"🟠"},
-          {l:"Foreign Natl", v:foreignCount,  c:"#042C53", bg:"#E6F1FB", icon:"🌍"},
-          {l:"Deportees",    v:deporteeCount, c:"#412402", bg:"#FAEEDA", icon:"✈️"},
-          {l:"Gang Linked",  v:gangCount,     c:"#501313", bg:"#FDEAEA", icon:"⚠️"},
+          {l:"Wanted",       v:wanted,        accent:"#F87171", border:"#B91C1C"},
+          {l:"In Custody",   v:inCustody,     accent:"#60A5FA", border:"#1D4ED8"},
+          {l:"Severe Risk",  v:severe,        accent:"#FB923C", border:"#C2410C"},
+          {l:"Foreign Natl", v:foreignCount,  accent:"#38BDF8", border:"#0369A1"},
+          {l:"Deportees",    v:deporteeCount, accent:"#FBBF24", border:"#B45309"},
+          {l:"Gang Linked",  v:gangCount,     accent:"#F472B6", border:"#9D174D"},
         ].map(k=>(
-          <div key={k.l} style={{padding:"12px 16px",borderRight:`1px solid ${C.border}`,background:k.bg}}>
-            <div style={{fontSize:10,color:k.c,fontWeight:600,marginBottom:3,opacity:0.75}}>{k.icon} {k.l.toUpperCase()}</div>
-            <div style={{fontSize:22,fontWeight:700,color:k.c,letterSpacing:"-0.02em"}}>{k.v}</div>
+          <div key={k.l} style={{padding:"10px 16px",borderRight:"1px solid rgba(255,255,255,0.08)",borderLeft:`3px solid ${k.border}`}}>
+            <div style={{fontSize:9,color:"rgba(255,255,255,0.4)",fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:2}}>{k.l}</div>
+            <div style={{fontSize:24,fontWeight:700,color:k.accent,letterSpacing:"-0.02em"}}>{k.v}</div>
           </div>
         ))}
       </div>
 
       {/* Toolbar */}
-      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderBottom:`1px solid ${C.border}`,background:C.surface,flexWrap:"wrap"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 20px",borderBottom:`1px solid ${C.border}`,background:C.surface,flexWrap:"wrap",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"}}>
         <div style={{position:"relative"}}>
           <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",color:C.text3,fontSize:14,pointerEvents:"none"}}>🔍</span>
           <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, alias, gang, ID..." style={{...inp,paddingLeft:30,width:230,height:32,fontSize:12}}/>
@@ -901,7 +919,7 @@ export default function App() {
       </div>
 
       {/* Body */}
-      <div style={{display:"flex",height:"calc(100vh - 56px - 64px - 52px)"}}>
+      <div style={{display:"flex",height:"calc(100vh - 22px - 58px - 44px - 52px)"}}>
         <div style={{flex:1,overflow:"auto"}}>
           {loading?(
             <div style={{padding:48,textAlign:"center",color:C.accent}}>Loading profiles...</div>
@@ -910,11 +928,11 @@ export default function App() {
           ):view==="table"?(
             <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
               <thead>
-                <tr style={{background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
+                <tr style={{background:"#1B2D4F",borderBottom:"none"}}>
                   <th style={{padding:"9px 12px",width:36}}><input type="checkbox" checked={selected.size===filtered.length&&filtered.length>0} onChange={toggleAll}/></th>
                   {[["id","Case ID"],["",""],["name","Name"],["",""],["risk","Risk"],["status","Status"],["primary_offence","Offence"],["location","Loc."],["arrest_year","Year"],["",""]].map(([col,label],i)=>(
-                    <th key={i} onClick={col?()=>handleSort(col):undefined} style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:sortCol===col?C.accent:C.text3,letterSpacing:"0.07em",textTransform:"uppercase",cursor:col?"pointer":"default",userSelect:"none",whiteSpace:"nowrap",borderRight:i<9?`1px solid ${C.border}`:"none",background:C.surface2}}>
-                      {label}{col&&sortCol===col&&<span style={{marginLeft:3,color:C.accent}}>{sortAsc?"↑":"↓"}</span>}
+                    <th key={i} onClick={col?()=>handleSort(col):undefined} style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:600,color:sortCol===col?"#93C5FD":"rgba(255,255,255,0.45)",letterSpacing:"0.09em",textTransform:"uppercase",cursor:col?"pointer":"default",userSelect:"none",whiteSpace:"nowrap",borderRight:i<9?"1px solid rgba(255,255,255,0.06)":"none",background:"transparent"}}>
+                      {label}{col&&sortCol===col&&<span style={{marginLeft:3,color:"#60A5FA"}}>{sortAsc?"↑":"↓"}</span>}
                     </th>
                   ))}
                 </tr>
@@ -996,21 +1014,24 @@ export default function App() {
         </div>
 
         {/* Detail Panel */}
-        <div style={{width:310,borderLeft:`1px solid ${C.border}`,background:C.surface,flexShrink:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{width:320,borderLeft:`1px solid ${C.border}`,background:C.surface,flexShrink:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           {!sel?(
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:10,padding:24}}>
-              <div style={{fontSize:40,opacity:0.3}}>👤</div>
-              <p style={{fontSize:12,textAlign:"center",color:C.text3,lineHeight:1.6}}>Select a profile to view details</p>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:12,padding:24,background:C.surface2}}>
+              <div style={{width:64,height:64,borderRadius:4,background:C.border,display:"flex",alignItems:"center",justifyContent:"center",opacity:0.3}}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#374151" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <p style={{fontSize:12,textAlign:"center",color:C.text3,lineHeight:1.6}}>Select a profile from the list<br/>to view full details</p>
             </div>
           ):(
             <>
-              <div style={{background:C.nav,padding:"14px 14px 12px",flexShrink:0}}>
-                <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:10}}>
-                  <Avatar r={sel} size={50}/>
+              <div style={{background:C.nav,padding:"14px 14px 12px",flexShrink:0,borderBottom:"2px solid #2A5EC4"}}>
+                <div style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
+                  <Avatar r={sel} size={54}/>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>{sel.name}</div>
-                    <div style={{fontSize:10,color:C.navMuted,fontFamily:"monospace",marginTop:2}}>{sel.id} · {sel.alias||"—"}</div>
-                    <div style={{fontSize:11,color:C.navMuted,marginTop:2}}>{sel.occupation} · {sel.nationality||"Fijian"}</div>
+                    <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",fontFamily:"monospace",letterSpacing:"0.08em",marginBottom:2}}>{sel.id}</div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.3}}>{sel.name}</div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",marginTop:2}}>{sel.alias||"—"} · {sel.nationality||"Fijian"}</div>
+                    <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:1}}>{sel.occupation||"—"}</div>
                   </div>
                 </div>
                 <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
@@ -1133,11 +1154,11 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <div style={{display:"flex",alignItems:"center",padding:"8px 20px",borderTop:`1px solid ${C.border}`,background:C.surface,gap:14,flexWrap:"wrap"}}>
-        <span style={{fontSize:11,color:C.text3}}>{filtered.length} profiles · {wanted} wanted · {severe} severe risk · {foreignCount} foreign · {deporteeCount} deportees</span>
-        {selected.size>0&&<span style={{fontSize:11,color:C.accent,fontWeight:600}}>{selected.size} selected</span>}
+      <div style={{display:"flex",alignItems:"center",padding:"7px 20px",borderTop:`2px solid ${C.border}`,background:C.nav,gap:14,flexWrap:"wrap"}}>
+        <span style={{fontSize:10,color:"rgba(255,255,255,0.4)",letterSpacing:"0.04em"}}>{filtered.length} profiles · {wanted} wanted · {severe} severe risk · {foreignCount} foreign nationals · {deporteeCount} deportees</span>
+        {selected.size>0&&<span style={{fontSize:10,color:"#60A5FA",fontWeight:600,letterSpacing:"0.04em"}}>{selected.size} selected</span>}
         <div style={{flex:1}}/>
-        <span style={{fontSize:11,color:C.text3}}>Fiji Central Criminal Intelligence · FY2026 · Confidential</span>
+        <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",letterSpacing:"0.06em",textTransform:"uppercase"}}>Fiji Central Criminal Intelligence · FY2026 · CONFIDENTIAL</span>
       </div>
     </div>
   );
