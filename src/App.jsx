@@ -253,37 +253,117 @@ function printProfiles(profiles) {
 }
 
 function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const login = async () => {
-    if (!email||!password){setError("Please enter email and password");return;}
-    setLoading(true);setError("");
-    const {error} = await supabase.auth.signInWithPassword({email,password});
-    if(error){setError("Incorrect email or password");setLoading(false);return;}
-    onLogin();setLoading(false);
+    if (!email||!password){ setError("Please enter your email and password."); return; }
+    setLoading(true); setError("");
+    const { error:err } = await supabase.auth.signInWithPassword({ email, password });
+    if (err){ setError("Invalid credentials. Access denied."); setLoading(false); return; }
+    onLogin(); setLoading(false);
   };
+
   return (
-    <div style={{minHeight:"100vh",background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",backgroundImage:"linear-gradient(135deg,#0F2044 0%,#1A3A6B 100%)"}}>
-      <div style={{background:C.surface,borderRadius:6,padding:"40px 36px",width:380,boxShadow:"0 20px 60px rgba(0,0,0,0.4)",border:`1px solid ${C.border}`}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{width:56,height:56,borderRadius:4,background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 14px",fontSize:24,border:"3px solid #2A5EC4"}}>🛡️</div>
-          <div style={{fontSize:11,fontWeight:700,color:C.classified,letterSpacing:"0.16em",textTransform:"uppercase",marginBottom:8}}>CLASSIFIED</div>
-          <div style={{fontSize:20,fontWeight:700,color:C.text,letterSpacing:"0.01em"}}>Criminal Intelligence System</div>
-          <div style={{fontSize:12,color:C.text3,marginTop:4}}>Fiji Central Criminal Intelligence</div>
-        </div>
-        {error&&<div style={{background:"#FDEAEA",border:"1px solid #F0A0A0",color:"#7A1A1A",padding:"8px 12px",borderRadius:6,fontSize:12,marginBottom:16}}>{error}</div>}
-        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontSize:11,fontWeight:600,color:C.text2,textTransform:"uppercase",letterSpacing:"0.06em"}}>Email</label>
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} style={inp}/>
+    <div style={{minHeight:"100vh",display:"flex",fontFamily:"'Inter',system-ui,sans-serif"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}`}</style>
+
+      {/* Left panel — branding */}
+      <div style={{flex:1,background:"linear-gradient(160deg,#0A1628 0%,#0F2044 45%,#1A3A6B 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px",position:"relative",overflow:"hidden"}}>
+
+        {/* Background pattern */}
+        <div style={{position:"absolute",inset:0,opacity:0.04,backgroundImage:"repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(255,255,255,1) 40px,rgba(255,255,255,1) 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,rgba(255,255,255,1) 40px,rgba(255,255,255,1) 41px)"}}/>
+
+        {/* Logo */}
+        <div style={{position:"relative",zIndex:1,textAlign:"center"}}>
+          <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" style={{marginBottom:24}}>
+            <path d="M48 4L8 20V48C8 68 26 84 48 92C70 84 88 68 88 48V20L48 4Z" fill="#1A3A6B" stroke="#2A5EC4" strokeWidth="2.5"/>
+            <path d="M48 12L16 25V48C16 64 30 78 48 85C66 78 80 64 80 48V25L48 12Z" fill="#0F2044" stroke="#3B6FD4" strokeWidth="1.5"/>
+            <circle cx="48" cy="46" r="16" fill="none" stroke="#60A5FA" strokeWidth="2"/>
+            <path d="M40 46L45 51L56 40" stroke="#60A5FA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M28 38H68" stroke="#2A5EC4" strokeWidth="1" opacity="0.5"/>
+            <path d="M28 54H68" stroke="#2A5EC4" strokeWidth="1" opacity="0.5"/>
+            <circle cx="48" cy="20" r="3" fill="#60A5FA" opacity="0.6"/>
+          </svg>
+
+          <div style={{fontSize:11,fontWeight:700,color:"#F87171",letterSpacing:"0.22em",textTransform:"uppercase",marginBottom:10}}>CLASSIFIED</div>
+          <div style={{fontSize:28,fontWeight:700,color:"#fff",lineHeight:1.2,letterSpacing:"0.01em",marginBottom:6}}>Fiji Central Criminal<br/>Intelligence System</div>
+          <div style={{width:48,height:2,background:"#2A5EC4",margin:"14px auto",borderRadius:2}}/>
+          <div style={{fontSize:13,color:"rgba(255,255,255,0.45)",letterSpacing:"0.08em",textTransform:"uppercase"}}>FCIS · Secure Access Portal</div>
+
+          <div style={{marginTop:48,display:"flex",flexDirection:"column",gap:10}}>
+            {[
+              {icon:"🛡️", text:"Criminal Profile Intelligence"},
+              {icon:"📋", text:"Incident Reporting System"},
+              {icon:"🔗", text:"Associate & Gang Network Tracking"},
+              {icon:"🌍", text:"International & Deportee Registry"},
+            ].map((f,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 14px",background:"rgba(255,255,255,0.05)",borderRadius:4,border:"1px solid rgba(255,255,255,0.07)"}}>
+                <span style={{fontSize:14}}>{f.icon}</span>
+                <span style={{fontSize:12,color:"rgba(255,255,255,0.55)",letterSpacing:"0.02em"}}>{f.text}</span>
+              </div>
+            ))}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            <label style={{fontSize:11,fontWeight:600,color:C.text2,textTransform:"uppercase",letterSpacing:"0.06em"}}>Password</label>
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} style={inp}/>
-          </div>
-          <button onClick={login} style={{...btnBlue,justifyContent:"center",padding:"10px"}} disabled={loading}>{loading?"Signing in...":"Sign in"}</button>
         </div>
-        <p style={{fontSize:11,color:C.text3,textAlign:"center",marginTop:20}}>Authorised personnel only.</p>
+
+        {/* Bottom strip */}
+        <div style={{position:"absolute",bottom:0,left:0,right:0,height:4,background:"linear-gradient(90deg,#1447C4,#2A5EC4,#60A5FA,#2A5EC4,#1447C4)"}}/>
+      </div>
+
+      {/* Right panel — login form */}
+      <div style={{width:420,background:"#F3F4F8",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 40px",position:"relative"}}>
+
+        {/* Top classified bar */}
+        <div style={{position:"absolute",top:0,left:0,right:0,background:"#7C0000",padding:"5px 20px",textAlign:"center"}}>
+          <span style={{fontSize:10,fontWeight:700,color:"#fff",letterSpacing:"0.15em",textTransform:"uppercase"}}>⚠ AUTHORISED PERSONNEL ONLY ⚠</span>
+        </div>
+
+        <div style={{marginTop:20}}>
+          <div style={{fontSize:22,fontWeight:700,color:"#0F172A",marginBottom:4,letterSpacing:"0.01em"}}>Secure Sign In</div>
+          <div style={{fontSize:13,color:"#6B7280",marginBottom:32}}>Enter your credentials to access the system</div>
+
+          {error && (
+            <div style={{background:"#FEE2E2",border:"1px solid #FECACA",color:"#991B1B",padding:"10px 14px",borderRadius:4,fontSize:12,marginBottom:20,display:"flex",alignItems:"center",gap:8}}>
+              <span>⚠</span>{error}
+            </div>
+          )}
+
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              <label style={{fontSize:11,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.07em"}}>Email Address</label>
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&login()}
+                placeholder="officer@police.gov.fj"
+                style={{padding:"10px 12px",fontSize:13,borderRadius:4,border:"1px solid #BFC5D5",background:"#fff",color:"#0F172A",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:5}}>
+              <label style={{fontSize:11,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.07em"}}>Password</label>
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
+                onKeyDown={e=>e.key==="Enter"&&login()}
+                placeholder="••••••••"
+                style={{padding:"10px 12px",fontSize:13,borderRadius:4,border:"1px solid #BFC5D5",background:"#fff",color:"#0F172A",fontFamily:"inherit",width:"100%",outline:"none"}}/>
+            </div>
+
+            <button onClick={login} disabled={loading}
+              style={{background:loading?"#6B7280":"#1447C4",color:"#fff",border:"none",borderRadius:4,padding:"12px",fontSize:14,fontWeight:600,cursor:loading?"not-allowed":"pointer",letterSpacing:"0.02em",marginTop:4,transition:"background 0.2s"}}>
+              {loading ? "Authenticating…" : "Sign In →"}
+            </button>
+          </div>
+
+          <div style={{marginTop:28,padding:"14px 16px",background:"rgba(20,71,196,0.06)",border:"1px solid rgba(20,71,196,0.15)",borderRadius:4}}>
+            <div style={{fontSize:11,fontWeight:600,color:"#1447C4",marginBottom:4,letterSpacing:"0.04em",textTransform:"uppercase"}}>Access Levels</div>
+            <div style={{fontSize:11,color:"#374151",lineHeight:1.7}}>
+              <div>🔵 <strong>Admin / Analyst</strong> — Full intelligence database access</div>
+              <div>🟢 <strong>Police Officer</strong> — Incident reporting portal</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{position:"absolute",bottom:20,left:40,right:40,textAlign:"center"}}>
+          <div style={{fontSize:10,color:"#9CA3AF",letterSpacing:"0.04em"}}>Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
+        </div>
       </div>
     </div>
   );
@@ -812,12 +892,31 @@ export default function App() {
   const deporteeCount = db.filter(r=>r.is_deportee).length;
   const gangCount = db.filter(r=>r.gang_affiliation).length;
 
-  if (authLoading) return <div style={{minHeight:"100vh",background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.5)",fontSize:13,letterSpacing:"0.06em"}}>LOADING SYSTEM…</div>;
+  if (authLoading) return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0A1628 0%,#0F2044 45%,#1A3A6B 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14}}>
+      <svg width="56" height="56" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M48 4L8 20V48C8 68 26 84 48 92C70 84 88 68 88 48V20L48 4Z" fill="#1A3A6B" stroke="#2A5EC4" strokeWidth="2.5"/>
+        <circle cx="48" cy="46" r="16" fill="none" stroke="#60A5FA" strokeWidth="2"/>
+        <path d="M40 46L45 51L56 40" stroke="#60A5FA" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+      <div style={{color:"rgba(255,255,255,0.4)",fontSize:12,letterSpacing:"0.14em",textTransform:"uppercase",fontFamily:"'Inter',system-ui,sans-serif"}}>Authenticating…</div>
+    </div>
+  );
 
-  // Officer role → render Officer Portal
-  if (user && userRole === "officer" && officerProfile) {
+  // Not logged in → show login cover
+  if (!user) return <LoginPage onLogin={()=>{}} />;
+
+  // Officer role → Officer Portal
+  if (userRole === "officer" && officerProfile) {
     return <OfficerPortal user={user} officer={officerProfile} onLogout={logout}/>;
   }
+
+  // Still loading role → brief wait
+  if (userRole === null) return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0A1628 0%,#0F2044 100%)",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.4)",fontSize:12,letterSpacing:"0.1em",fontFamily:"'Inter',system-ui,sans-serif"}}>
+      LOADING…
+    </div>
+  );
 
   const DPRow = ({label,value,icon}) => !value?null:(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",fontSize:12,gap:8,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
@@ -844,8 +943,7 @@ export default function App() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:${C.border2};border-radius:4px} .rh:hover{background:#EAF0FC!important} .rs-row{background:#DDE9F8!important;border-left:3px solid ${C.accent}!important} .sel-row{background:#EEF4FB!important} .ch:hover{border-color:${C.accent}!important} input[type=checkbox]{cursor:pointer;width:15px;height:15px;accent-color:${C.accent}}`}</style>
 
       {toast&&<div style={{position:"fixed",bottom:24,right:24,background:"#0F2044",color:"#fff",padding:"11px 20px",borderRadius:6,fontWeight:500,fontSize:13,zIndex:200,boxShadow:"0 6px 20px rgba(0,0,0,0.25)",letterSpacing:"0.01em",border:"1px solid rgba(255,255,255,0.1)"}}>{toast}</div>}
-      {modal&&!modal.isLogin&&user&&<Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
-      {modal?.isLogin&&<LoginPage onLogin={()=>{setModal(null);showToast("Welcome back!");}}/>}
+      {modal&&<Modal record={modal.record} onSave={saveRecord} onClose={()=>setModal(null)} allIds={db.map(r=>r.id)}/>}
 
       {/* Classification Banner */}
       <div style={{background:"#7C0000",padding:"3px 24px",display:"flex",alignItems:"center",justifyContent:"center",gap:16,position:"sticky",top:0,zIndex:51}}>
@@ -866,15 +964,11 @@ export default function App() {
           <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",letterSpacing:"0.04em"}}>SECURE DATABASE — FY2026</div>
         </div>
         <div style={{flex:1}}/>
-        {user?(
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",borderRight:"1px solid rgba(255,255,255,0.12)",paddingRight:10}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:10,marginRight:4,letterSpacing:"0.05em",textTransform:"uppercase"}}>User:</span>{user.email}</div>
-            <button onClick={logout} style={{...btnSm,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.75)",fontSize:11}}>Sign out</button>
-            <button onClick={()=>setModal({record:{}})} style={{...btnBlue,background:"#1A56DB",border:"1px solid #1447C4",fontSize:12,fontWeight:600,padding:"7px 16px"}}>+ New Profile</button>
-          </div>
-        ):(
-          <button onClick={()=>setModal({isLogin:true})} style={{...btnSm,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",color:"#fff",fontSize:11}}>🔐 Admin Login</button>
-        )}
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",borderRight:"1px solid rgba(255,255,255,0.12)",paddingRight:10}}><span style={{color:"rgba(255,255,255,0.3)",fontSize:10,marginRight:4,letterSpacing:"0.05em",textTransform:"uppercase"}}>Admin:</span>{user.email}</div>
+          <button onClick={logout} style={{...btnSm,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.15)",color:"rgba(255,255,255,0.75)",fontSize:11}}>Sign out</button>
+          <button onClick={()=>setModal({record:{}})} style={{...btnBlue,background:"#1A56DB",border:"1px solid #1447C4",fontSize:12,fontWeight:600,padding:"7px 16px"}}>+ New Profile</button>
+        </div>
       </div>
 
       {/* KPIs */}
