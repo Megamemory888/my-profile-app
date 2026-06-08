@@ -644,6 +644,7 @@ function Modal({record,onSave,onClose,allIds}) {
 export default function App() {
   const [user,setUser]=useState(null);const [authLoading,setAuthLoading]=useState(true);
   const [userRole,setUserRole]=useState(null);
+  const [officerProfile,setOfficerProfile]=useState(null);
   const [db,setDb]=useState([]);const [loading,setLoading]=useState(true);
   const [query,setQuery]=useState("");const [fRisk,setFRisk]=useState("");
   const [fStatus,setFStatus]=useState("");const [fLocation,setFLocation]=useState("");
@@ -656,9 +657,10 @@ export default function App() {
   const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(""),2800);};
 
   const fetchRole=async(u)=>{
-    if(!u){setUserRole(null);return;}
-    const{data}=await supabase.from("user_roles").select("role").eq("user_id",u.id).single();
+    if(!u){setUserRole(null);setOfficerProfile(null);return;}
+    const{data}=await supabase.from("user_roles").select("*").eq("user_id",u.id).single();
     setUserRole(data?.role||"admin");
+    if(data?.role==="officer") setOfficerProfile({...data, user_id:u.id});
   };
 
   useEffect(()=>{
@@ -735,7 +737,7 @@ export default function App() {
   if(authLoading)return <div style={{minHeight:"100vh",background:"#0F2044",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.6)",fontSize:13,letterSpacing:"0.08em"}}>AUTHENTICATING...</div>;
 
   if(!user)return <LoginPage onLogin={()=>{}} />;
-  if(userRole==="officer")return <OfficerPortal user={user} onLogout={async()=>{await supabase.auth.signOut();}}/>;
+  if(userRole==="officer")return <OfficerPortal user={user} officer={officerProfile} onLogout={async()=>{await supabase.auth.signOut();}}/>;
 
   const DPRow=({label,value,icon})=>!value?null:(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",fontSize:12,gap:8,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
