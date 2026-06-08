@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
+import OfficerPortal from "./OfficerPortal";
 
 const OFFENCES = ["Aggravated Assault","Armed Robbery","Bribery","Burglary","Counterfeit Operations","Cybercrime","Domestic Violence","Drug Trafficking","Extortion","Fraud","Human Trafficking","Identity Fraud","Illegal Firearm Possession","Insurance Fraud","International Drug Smuggling","Kidnapping","Money Laundering","Organized Crime Activity","Smuggling","Tax Evasion","Vehicle Theft"];
 const OCCUPATIONS = ["Accountant","Business Owner","Construction Worker","Dock Worker","Farmer","Fisherman","Hotel Staff","IT Technician","Mechanic","Nightclub Operator","Retail Manager","Security Guard","Taxi Driver","Warehouse Supervisor"];
@@ -687,6 +688,8 @@ function Modal({ record, onSave, onClose, allIds }) {
 
 export default function App() {
   const [user, setUser] = useState(null);
+  const [userRole, setUserRole] = useState(null);   // 'admin' | 'officer' | null
+  const [officerProfile, setOfficerProfile] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [db, setDb] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -709,13 +712,31 @@ export default function App() {
 
   const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(""), 2800); };
 
+  const loadRole = async (uid) => {
+    if (!uid) { setUserRole(null); setOfficerProfile(null); return; }
+    const { data } = await supabase.from("user_roles").select("*").eq("user_id", uid).single();
+    if (data) {
+      setUserRole(data.role);
+      if (data.role === "officer") setOfficerProfile({ ...data, user_id: uid });
+    } else {
+      // No role record = treat as admin (backwards compatible with existing admins)
+      setUserRole("admin");
+    }
+  };
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => { setUser(session?.user??null); setAuthLoading(false); });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => setUser(session?.user??null));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user??null);
+      loadRole(session?.user?.id??null).then(()=>setAuthLoading(false));
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setUser(session?.user??null);
+      loadRole(session?.user?.id??null);
+    });
     return () => subscription.unsubscribe();
   }, []);
 
-  const logout = async () => { await supabase.auth.signOut(); showToast("Signed out."); };
+  const logout = async () => { await supabase.auth.signOut(); setUserRole(null); setOfficerProfile(null); showToast("Signed out."); };
 
   const load = async () => {
     setLoading(true);
@@ -791,7 +812,12 @@ export default function App() {
   const deporteeCount = db.filter(r=>r.is_deportee).length;
   const gangCount = db.filter(r=>r.gang_affiliation).length;
 
-  if (authLoading) return <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>Loading...</div>;
+  if (authLoading) return <div style={{minHeight:"100vh",background:C.nav,display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.5)",fontSize:13,letterSpacing:"0.06em"}}>LOADING SYSTEM…</div>;
+
+  // Officer role → render Officer Portal
+  if (user && userRole === "officer" && officerProfile) {
+    return <OfficerPortal user={user} officer={officerProfile} onLogout={logout}/>;
+  }
 
   const DPRow = ({label,value,icon}) => !value?null:(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",fontSize:12,gap:8,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
