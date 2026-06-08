@@ -719,7 +719,6 @@ export default function App() {
   if(authLoading)return <div style={{minHeight:"100vh",background:"#0F2044",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(255,255,255,0.6)",fontSize:13,letterSpacing:"0.08em"}}>AUTHENTICATING...</div>;
 
   if(!user)return <LoginPage onLogin={()=>{}} />;
-  }
 
   const DPRow=({label,value,icon})=>!value?null:(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",fontSize:12,gap:8,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
