@@ -1,34 +1,57 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 
-const OFFENCES = ["Aggravated Assault","Armed Robbery","Bribery","Burglary","Counterfeit Operations","Cybercrime","Domestic Violence","Drug Trafficking","Extortion","Fraud","Human Trafficking","Identity Fraud","Illegal Firearm Possession","Insurance Fraud","Kidnapping","Money Laundering","Organized Crime Activity","Smuggling","Tax Evasion","Vehicle Theft"];
+const OFFENCES = ["Aggravated Assault","Armed Robbery","Bribery","Burglary","Counterfeit Operations","Cybercrime","Domestic Violence","Drug Trafficking","Extortion","Fraud","Human Trafficking","Identity Fraud","Illegal Firearm Possession","Insurance Fraud","International Drug Smuggling","Kidnapping","Money Laundering","Organized Crime Activity","Smuggling","Tax Evasion","Vehicle Theft"];
 const OCCUPATIONS = ["Accountant","Business Owner","Construction Worker","Dock Worker","Farmer","Fisherman","Hotel Staff","IT Technician","Mechanic","Nightclub Operator","Retail Manager","Security Guard","Taxi Driver","Warehouse Supervisor"];
 const LOCATIONS = ["Ba","Labasa","Lautoka","Levuka","Nadi","Nausori","Rakiraki","Savusavu","Sigatoka","Suva"];
 const BEH = ["Financially motivated offender","Frequent cross-border travel","History of violent escalation","Known to operate in groups","Maintains low public profile","Repeat offender with regional links","Suspected gang affiliations","Technically skilled offender"];
 const PSY = ["Avoids direct confrontation when possible","Calculated and methodical","Displays anti-social behaviour patterns","High adaptability","Impulsive under pressure","Manipulative tendencies observed"];
 const RELATIONSHIP_TYPES = ["Known Associate","Gang Member","Family Member","Business Partner","Supplier","Distributor","Co-offender","Suspected Link","Informant","Other"];
 
+const NATIONALITIES = [
+  "Fijian",
+  "Australian","New Zealander","Papua New Guinean","Samoan","Tongan","Vanuatuan","Solomon Islander","i-Kiribati","Tuvaluan","Cook Islander",
+  "Ecuadorian","Mexican","Colombian","American","Brazilian","Peruvian","Chilean","Venezuelan",
+  "British","French","Dutch","Spanish","Italian","German","Portuguese",
+  "Chinese","Indian","Filipino","Indonesian","Thai","Malaysian","Sri Lankan",
+  "Other",
+];
+
+const GANG_GROUPS = [
+  { group: "Ecuador", gangs: ["Los Choneros","Los Lobos","Tiguerones","Chone Killers"] },
+  { group: "Mexico / Cartels", gangs: ["Sinaloa Cartel","Jalisco New Generation Cartel (CJNG)","Gulf Cartel","Los Zetas Remnants","Cartel del Noreste"] },
+  { group: "Australia / New Zealand", gangs: ["Coconut Cartel","Mongrel Mob","Black Power","Comancheros","Head Hunters","King Cobras"] },
+  { group: "United States", gangs: ["MS-13","18th Street Gang","Mexican Mafia","Bloods","Crips","Latin Kings"] },
+  { group: "Local / Unknown", gangs: ["Local Syndicate","Unknown Gang","Independent Operator"] },
+];
+
+const DEPORTEE_SOURCES = ["Australia","New Zealand","United States","United Kingdom","Canada","Other"];
+const ENTRY_METHODS = ["Air — Commercial Flight","Air — Charter / Private","Sea — Cargo Ship","Sea — Private Vessel","Unknown"];
+const VISA_STATUSES = ["Tourist Visa","Work Visa","Student Visa","Overstayed Visa","No Visa (Illegal Entry)","Diplomatic","Transit","Unknown"];
+const GANG_RANKS = ["Leader / Boss","Lieutenant","Enforcer","Member","Associate","Prospect","Unknown"];
+
 const OFFENCE_COLOR = {
-  "Aggravated Assault":        { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
-  "Armed Robbery":             { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
-  "Domestic Violence":         { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
-  "Kidnapping":                { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
-  "Human Trafficking":         { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
-  "Illegal Firearm Possession":{ bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
-  "Drug Trafficking":          { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
-  "Organized Crime Activity":  { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
-  "Smuggling":                 { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
-  "Fraud":                     { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Bribery":                   { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Cybercrime":                { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Counterfeit Operations":    { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Identity Fraud":            { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Insurance Fraud":           { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Money Laundering":          { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Tax Evasion":               { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
-  "Extortion":                 { bg:"#EEEDFE", text:"#26215C", border:"#AFA9EC", dot:"#534AB7" },
-  "Burglary":                  { bg:"#E6F1FB", text:"#042C53", border:"#85B7EB", dot:"#185FA5" },
-  "Vehicle Theft":             { bg:"#E6F1FB", text:"#042C53", border:"#85B7EB", dot:"#185FA5" },
+  "Aggravated Assault":           { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
+  "Armed Robbery":                { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
+  "Domestic Violence":            { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
+  "Kidnapping":                   { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
+  "Human Trafficking":            { bg:"#FDEAEA", text:"#7A1A1A", border:"#F0A0A0", dot:"#E24B4A" },
+  "Illegal Firearm Possession":   { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
+  "Drug Trafficking":             { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
+  "International Drug Smuggling": { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
+  "Organized Crime Activity":     { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
+  "Smuggling":                    { bg:"#FAECE7", text:"#4A1B0C", border:"#F0997B", dot:"#D85A30" },
+  "Fraud":                        { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Bribery":                      { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Cybercrime":                   { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Counterfeit Operations":       { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Identity Fraud":               { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Insurance Fraud":              { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Money Laundering":             { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Tax Evasion":                  { bg:"#FAEEDA", text:"#412402", border:"#FAC775", dot:"#BA7517" },
+  "Extortion":                    { bg:"#EEEDFE", text:"#26215C", border:"#AFA9EC", dot:"#534AB7" },
+  "Burglary":                     { bg:"#E6F1FB", text:"#042C53", border:"#85B7EB", dot:"#185FA5" },
+  "Vehicle Theft":                { bg:"#E6F1FB", text:"#042C53", border:"#85B7EB", dot:"#185FA5" },
 };
 
 const RISK_STYLE = {
@@ -51,6 +74,8 @@ const C = {
   border:"#DDE1E9", border2:"#C8CDD8",
   text:"#1A1D23", text2:"#4A5568", text3:"#7B8794",
   accent:"#1A56DB", accentL:"#EBF2FF",
+  green:"#1E7E34", greenL:"#EAF3DE",
+  orange:"#B45309", orangeL:"#FAEEDA",
 };
 
 const inp = { padding:"7px 10px",fontSize:12,borderRadius:6,border:`1px solid ${C.border2}`,background:C.surface,color:C.text,fontFamily:"inherit",width:"100%",boxSizing:"border-box" };
@@ -114,6 +139,7 @@ function printProfiles(profiles) {
     const rs = RISK_STYLE[r.risk]||{};
     const ss = STATUS_STYLE[r.status]||{};
     const oc = OFFENCE_COLOR[r.primary_offence]||{};
+    const intlTags = [r.is_foreign_national&&`<span class="tag tag-intl">🌍 Foreign National</span>`, r.is_deportee&&`<span class="tag tag-deportee">✈️ Deportee — ${r.deported_from||""}</span>`, r.gang_affiliation&&`<span class="tag tag-gang">⚠️ ${r.gang_affiliation}${r.gang_rank?` · ${r.gang_rank}`:""}</span>`].filter(Boolean).join(" ");
     return `
       <div class="profile-card">
         <div class="card-header">
@@ -122,7 +148,8 @@ function printProfiles(profiles) {
             <div class="header-info">
               <div class="profile-id">${r.id}</div>
               <div class="profile-name">${r.name}</div>
-              <div class="profile-sub">${r.alias||"—"} · ${r.occupation||"—"}</div>
+              <div class="profile-sub">${r.alias||"—"} · ${r.occupation||"—"} · ${r.nationality||"Fijian"}</div>
+              ${intlTags?`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${intlTags}</div>`:""}
             </div>
           </div>
           <div class="header-badges">
@@ -144,6 +171,26 @@ function printProfiles(profiles) {
               ${r.medical_conditions?`<div class="field full"><span class="label">Medical</span><span class="value">${r.medical_conditions}</span></div>`:""}
             </div>
           </div>
+          ${r.is_foreign_national||r.is_deportee?`
+          <div class="section"><div class="section-title" style="background:#E6F1FB;color:#042C53">🌍 International Profile</div>
+            <div class="grid2" style="padding:10px 14px">
+              ${r.country_of_origin?`<div class="field"><span class="label">Country of Origin</span><span class="value">${r.country_of_origin}</span></div>`:""}
+              ${r.passport_number?`<div class="field"><span class="label">Passport No.</span><span class="value">${r.passport_number}</span></div>`:""}
+              ${r.visa_status?`<div class="field"><span class="label">Visa Status</span><span class="value">${r.visa_status}</span></div>`:""}
+              ${r.entry_method?`<div class="field"><span class="label">Entry Method</span><span class="value">${r.entry_method}</span></div>`:""}
+              ${r.is_deportee?`<div class="field"><span class="label">Deported From</span><span class="value">${r.deported_from||"—"}</span></div>`:""}
+              ${r.deportation_year?`<div class="field"><span class="label">Deportation Year</span><span class="value">${r.deportation_year}</span></div>`:""}
+              ${r.known_routes?`<div class="field full"><span class="label">Known Routes</span><span class="value">${r.known_routes}</span></div>`:""}
+              ${r.international_links?`<div class="field full"><span class="label">International Links</span><span class="value">${r.international_links}</span></div>`:""}
+            </div>
+          </div>`:""}
+          ${r.gang_affiliation?`
+          <div class="section"><div class="section-title" style="background:#FDEAEA;color:#7A1A1A">⚠️ Gang / Club Affiliation</div>
+            <div class="grid2" style="padding:10px 14px">
+              <div class="field"><span class="label">Gang / Club</span><span class="value" style="font-weight:700">${r.gang_affiliation}</span></div>
+              ${r.gang_rank?`<div class="field"><span class="label">Rank / Role</span><span class="value">${r.gang_rank}</span></div>`:""}
+            </div>
+          </div>`:""}
           <div class="section"><div class="section-title">Criminal Record</div>
             <div class="offence-block" style="background:${oc.bg||"#f5f5f5"};border:1px solid ${oc.border||"#ddd"}">
               <div style="color:${oc.dot||"#333"};font-size:11px;font-weight:700;text-transform:uppercase">Primary offence</div>
@@ -170,10 +217,11 @@ function printProfiles(profiles) {
   .cover-meta{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.2);display:flex;gap:40px}.cover-meta-item{font-size:12px}.cover-meta-item b{display:block;font-size:20px;font-weight:700;margin-bottom:2px}
   .profile-card{background:white;margin:0 24px 24px;border-radius:10px;overflow:hidden;border:1px solid #dde1e9;page-break-after:always;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
   .card-header{background:#1C2B4A;padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-start}
-  .header-left{display:flex;gap:14px;align-items:center}.photo{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)}
+  .header-left{display:flex;gap:14px;align-items:flex-start}.photo{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)}
   .initials{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.15);color:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
   .profile-id{font-size:10px;color:rgba(255,255,255,0.6);font-family:monospace}.profile-name{font-size:18px;font-weight:700;color:white}.profile-sub{font-size:12px;color:rgba(255,255,255,0.65);margin-top:3px}
   .header-badges{display:flex;flex-direction:column;gap:5px;align-items:flex-end}.badge{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}.tag-intl{background:#E6F1FB;color:#042C53}.tag-deportee{background:#FAEEDA;color:#412402}.tag-gang{background:#FDEAEA;color:#7A1A1A}
   .card-body{padding:20px;display:flex;flex-direction:column;gap:16px}.section{border:1px solid #e8eaee;border-radius:8px;overflow:hidden}
   .section-title{background:#f4f5f7;padding:7px 14px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#7b8794;border-bottom:1px solid #e8eaee}
   .grid2{display:grid;grid-template-columns:1fr 1fr;padding:10px 14px;gap:6px}.field{display:flex;flex-direction:column;gap:2px}.field.full{grid-column:1/-1}
@@ -183,7 +231,14 @@ function printProfiles(profiles) {
   @media print{body{background:white}.profile-card{margin:0;border-radius:0;box-shadow:none}.no-print{display:none!important}}</style></head>
   <body>
   <div class="cover"><div style="font-size:32px;margin-bottom:12px">🛡️</div><div class="cover-title">Criminal Intelligence Report</div><div class="cover-sub">Fiji Central Criminal Intelligence — CONFIDENTIAL</div>
-  <div class="cover-meta"><div class="cover-meta-item"><b>${profiles.length}</b>Profile${profiles.length!==1?"s":""}</div><div class="cover-meta-item"><b>${now}</b>Date printed</div><div class="cover-meta-item"><b>${profiles.filter(p=>p.status==="Wanted").length}</b>Wanted</div></div></div>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><b>${profiles.length}</b>Profile${profiles.length!==1?"s":""}</div>
+    <div class="cover-meta-item"><b>${now}</b>Date printed</div>
+    <div class="cover-meta-item"><b>${profiles.filter(p=>p.status==="Wanted").length}</b>Wanted</div>
+    <div class="cover-meta-item"><b>${profiles.filter(p=>p.is_foreign_national).length}</b>Foreign Nationals</div>
+    <div class="cover-meta-item"><b>${profiles.filter(p=>p.is_deportee).length}</b>Deportees</div>
+    <div class="cover-meta-item"><b>${profiles.filter(p=>p.gang_affiliation).length}</b>Gang Affiliated</div>
+  </div></div>
   <div style="text-align:right;padding:0 24px 12px" class="no-print">
     <button onclick="window.print()" style="background:#1C2B4A;color:white;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-right:8px">🖨️ Print / Save as PDF</button>
     <button onclick="window.close()" style="background:#f0f2f5;color:#4a5568;border:1px solid #dde1e9;padding:10px 24px;border-radius:6px;font-size:13px;cursor:pointer">Close</button>
@@ -249,10 +304,9 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
 
   const loadAssociates = useCallback(async () => {
     setLoading(true);
-    // Load both directions: profiles where this is profile_id OR associate_id
     const [{ data: d1 }, { data: d2 }] = await Promise.all([
-      supabase.from("profile_associates").select("id, relationship_type, associate_id, criminal_profiles!profile_associates_associate_id_fkey(id,name,risk,status,primary_offence,photo_url)").eq("profile_id", profileId),
-      supabase.from("profile_associates").select("id, relationship_type, profile_id, criminal_profiles!profile_associates_profile_id_fkey(id,name,risk,status,primary_offence,photo_url)").eq("associate_id", profileId),
+      supabase.from("profile_associates").select("id, relationship_type, associate_id, criminal_profiles!profile_associates_associate_id_fkey(id,name,risk,status,primary_offence,photo_url,is_foreign_national,is_deportee,gang_affiliation)").eq("profile_id", profileId),
+      supabase.from("profile_associates").select("id, relationship_type, profile_id, criminal_profiles!profile_associates_profile_id_fkey(id,name,risk,status,primary_offence,photo_url,is_foreign_national,is_deportee,gang_affiliation)").eq("associate_id", profileId),
     ]);
     const combined = [
       ...(d1||[]).map(x=>({ linkId:x.id, relType:x.relationship_type, profile: x.criminal_profiles })),
@@ -269,7 +323,7 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
     if (q.length < 2) { setSearchResults([]); return; }
     setSearching(true);
     const { data } = await supabase.from("criminal_profiles")
-      .select("id,name,risk,status,primary_offence,photo_url")
+      .select("id,name,risk,status,primary_offence,photo_url,is_foreign_national,gang_affiliation")
       .neq("id", profileId)
       .or(`name.ilike.%${q}%,id.ilike.%${q}%,alias.ilike.%${q}%`)
       .limit(8);
@@ -278,13 +332,10 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
   };
 
   const linkAssociate = async (associateProfile) => {
-    // Check not already linked
     const already = associates.find(a => a.profile?.id === associateProfile.id);
     if (already) { alert("Already linked as associate."); return; }
     const { error } = await supabase.from("profile_associates").insert([{
-      profile_id: profileId,
-      associate_id: associateProfile.id,
-      relationship_type: relType,
+      profile_id: profileId, associate_id: associateProfile.id, relationship_type: relType,
     }]);
     if (error) { alert("Error linking: " + error.message); return; }
     setShowAdd(false); setSearchQ(""); setSearchResults([]);
@@ -306,19 +357,11 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
         {canEdit&&<button onClick={()=>setShowAdd(s=>!s)} style={{...btnBlue,padding:"3px 10px",fontSize:11}}>{showAdd?"Cancel":"+ Link"}</button>}
       </div>
 
-      {/* Add associate search box */}
       {showAdd && (
         <div style={{background:C.accentL,border:`1px solid #85B7EB`,borderRadius:8,padding:"10px",marginBottom:10}}>
           <div style={{fontSize:11,fontWeight:600,color:C.accent,marginBottom:6}}>Search for a profile to link:</div>
-          <input
-            ref={searchRef}
-            type="text"
-            value={searchQ}
-            onChange={e=>handleSearch(e.target.value)}
-            placeholder="Type name, alias or ID..."
-            style={{...inp,marginBottom:6}}
-            autoFocus
-          />
+          <input ref={searchRef} type="text" value={searchQ} onChange={e=>handleSearch(e.target.value)}
+            placeholder="Type name, alias or ID..." style={{...inp,marginBottom:6}} autoFocus/>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:6}}>
             <label style={{fontSize:11,color:C.text2,flexShrink:0}}>Relationship:</label>
             <select value={relType} onChange={e=>setRelType(e.target.value)} style={{...inp,flex:1}}>
@@ -330,12 +373,14 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
             <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:200,overflowY:"auto"}}>
               {searchResults.map(r=>(
                 <div key={r.id} onClick={()=>linkAssociate(r)}
-                  style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.surface,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border}`,transition:"background 0.1s"}}
+                  style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",background:C.surface,borderRadius:6,cursor:"pointer",border:`1px solid ${C.border}`}}
                   onMouseOver={e=>e.currentTarget.style.background=C.surface2}
                   onMouseOut={e=>e.currentTarget.style.background=C.surface}>
                   <Avatar r={r} size={28}/>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:12,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</div>
+                    <div style={{fontSize:12,fontWeight:600,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {r.name} {r.is_foreign_national&&<span style={{fontSize:10}}>🌍</span>}
+                    </div>
                     <div style={{fontSize:10,color:C.text3,fontFamily:"monospace"}}>{r.id}</div>
                   </div>
                   <Badge label={r.risk} style={RISK_STYLE[r.risk]}/>
@@ -350,7 +395,6 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
         </div>
       )}
 
-      {/* Associates list */}
       {loading ? (
         <div style={{fontSize:11,color:C.text3,padding:"4px 0"}}>Loading associates...</div>
       ) : associates.length === 0 ? (
@@ -362,9 +406,11 @@ function AssociatesPanel({ profileId, onNavigate, canEdit }) {
               <div style={{cursor:"pointer",display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}} onClick={()=>onNavigate(r.id)}>
                 <Avatar r={r} size={32}/>
                 <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12,fontWeight:600,color:C.accent,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:"underline",cursor:"pointer"}}>{r.name}</div>
+                  <div style={{fontSize:12,fontWeight:600,color:C.accent,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",textDecoration:"underline",cursor:"pointer"}}>
+                    {r.name} {r.is_foreign_national&&<span style={{fontSize:11}}>🌍</span>}
+                  </div>
                   <div style={{fontSize:10,color:C.text3,fontFamily:"monospace"}}>{r.id}</div>
-                  <div style={{fontSize:10,color:C.text2,marginTop:1}}>{relType}</div>
+                  <div style={{fontSize:10,color:C.text2,marginTop:1}}>{relType}{r.gang_affiliation&&<span style={{marginLeft:4,color:"#7A1A1A"}}>⚠️ {r.gang_affiliation}</span>}</div>
                 </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
@@ -389,6 +435,7 @@ function Modal({ record, onSave, onClose, allIds }) {
   const [f, setF] = useState({
     name:record.name||"", alias:record.alias||"", gender:record.gender||"Male",
     dob:record.dob||"", location:record.location||"Suva", occupation:record.occupation||"Taxi Driver",
+    nationality:record.nationality||"Fijian",
     primary_offence:record.primary_offence||"Fraud", secondary_offence:record.secondary_offence||"Bribery",
     arrest_year:record.arrest_year||2025, sentence:record.sentence||1,
     risk:record.risk||"Moderate", status:record.status||"Under Investigation",
@@ -400,6 +447,21 @@ function Modal({ record, onSave, onClose, allIds }) {
     medical_conditions:record.medical_conditions||"", release_date:record.release_date||"",
     case_notes:record.case_notes||"",
     photoData:null, thumbData:null,
+    // International fields
+    is_foreign_national: record.is_foreign_national||false,
+    country_of_origin: record.country_of_origin||"",
+    passport_number: record.passport_number||"",
+    visa_status: record.visa_status||"",
+    entry_method: record.entry_method||"",
+    known_routes: record.known_routes||"",
+    international_links: record.international_links||"",
+    // Deportee fields
+    is_deportee: record.is_deportee||false,
+    deported_from: record.deported_from||"",
+    deportation_year: record.deportation_year||"",
+    // Gang fields
+    gang_affiliation: record.gang_affiliation||"",
+    gang_rank: record.gang_rank||"",
   });
   const [saving, setSaving] = useState(false);
   const set=(k,v)=>setF(p=>({...p,[k]:v}));
@@ -415,7 +477,7 @@ function Modal({ record, onSave, onClose, allIds }) {
     if (f.thumbData) thumb_url = await uploadFile(f.thumbData, "thumbs", newId);
     const dbRecord = {
       id:newId, name:f.name, alias:f.alias, gender:f.gender, dob:f.dob,
-      nationality:"Fijian", location:f.location, occupation:f.occupation,
+      nationality:f.nationality, location:f.location, occupation:f.occupation,
       primary_offence:f.primary_offence, secondary_offence:f.secondary_offence,
       arrest_year:f.arrest_year, sentence:f.sentence, risk:f.risk, status:f.status,
       associates:f.associates, convictions:f.convictions, behaviour:f.behaviour,
@@ -424,6 +486,18 @@ function Modal({ record, onSave, onClose, allIds }) {
       vehicle_registration:f.vehicle_registration, family_members:f.family_members,
       medical_conditions:f.medical_conditions, release_date:f.release_date,
       case_notes:f.case_notes,
+      is_foreign_national:f.is_foreign_national,
+      country_of_origin:f.is_foreign_national?f.country_of_origin:null,
+      passport_number:f.is_foreign_national?f.passport_number:null,
+      visa_status:f.is_foreign_national?f.visa_status:null,
+      entry_method:f.is_foreign_national?f.entry_method:null,
+      known_routes:f.is_foreign_national?f.known_routes:null,
+      international_links:f.is_foreign_national?f.international_links:null,
+      is_deportee:f.is_deportee,
+      deported_from:f.is_deportee?f.deported_from:null,
+      deportation_year:f.is_deportee&&f.deportation_year?Number(f.deportation_year):null,
+      gang_affiliation:f.gang_affiliation||null,
+      gang_rank:f.gang_affiliation?f.gang_rank:null,
     };
     onSave(dbRecord); setSaving(false);
   };
@@ -439,7 +513,7 @@ function Modal({ record, onSave, onClose, allIds }) {
 
   return (
     <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",zIndex:100,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"20px 10px",backdropFilter:"blur(3px)"}} onClick={e=>e.target===e.currentTarget&&onClose()}>
-      <div style={{background:C.surface,borderRadius:12,width:580,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.18)",border:`1px solid ${C.border}`}}>
+      <div style={{background:C.surface,borderRadius:12,width:600,maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden",boxShadow:"0 20px 60px rgba(0,0,0,0.18)",border:`1px solid ${C.border}`}}>
         <div style={{padding:"16px 20px",borderBottom:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:C.nav}}>
           <div>
             <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>{isNew?"New Criminal Profile":"Edit Profile"}</div>
@@ -448,6 +522,8 @@ function Modal({ record, onSave, onClose, allIds }) {
           <button onClick={onClose} style={{...btnSm,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",color:"#fff",padding:"4px 10px"}}>✕ Close</button>
         </div>
         <div style={{overflowY:"auto",flex:1,padding:"18px 20px",display:"flex",flexDirection:"column",gap:18,background:C.bg}}>
+
+          {/* Biometrics */}
           <div style={{background:C.surface,borderRadius:10,padding:"16px",border:`1px solid ${C.border}`}}>
             <SectionLabel icon="🔬">Biometric data</SectionLabel>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
@@ -467,17 +543,97 @@ function Modal({ record, onSave, onClose, allIds }) {
               </div>
             </div>
           </div>
+
+          {/* Personal details */}
           <div style={{background:C.surface,borderRadius:10,padding:"16px",border:`1px solid ${C.border}`}}>
             <SectionLabel icon="👤">Personal details</SectionLabel>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {fg("Full Name *","name")} {fg("Alias","alias")}
               {fg("Gender","gender","text",["Male","Female"])} {fg("Date of birth","dob","date")}
-              {fg("Location","location","text",LOCATIONS)} {fg("Occupation","occupation","text",OCCUPATIONS)}
+              {fg("Nationality","nationality","text",NATIONALITIES)} {fg("Location","location","text",LOCATIONS)}
+              {fg("Occupation","occupation","text",OCCUPATIONS)}
               {fg("📞 Phone","phone_number")} {fg("🚗 Vehicle","vehicle_registration")}
               <div style={{gridColumn:"1/-1"}}>{fg("🏠 Address","home_address","text",null,true)}</div>
               {fg("👨‍👩‍👧 Family","family_members")} {fg("🏥 Medical","medical_conditions")}
             </div>
           </div>
+
+          {/* International / Deportee */}
+          <div style={{background:C.surface,borderRadius:10,padding:"16px",border:`1px solid ${C.border}`}}>
+            <SectionLabel icon="🌏">International Profile</SectionLabel>
+            <div style={{display:"flex",gap:20,marginBottom:14}}>
+              <label style={{display:"flex",alignItems:"center",gap:7,cursor:"pointer",padding:"8px 14px",borderRadius:8,border:`2px solid ${f.is_foreign_national?C.accent:C.border}`,background:f.is_foreign_national?C.accentL:C.surface2,flex:1}}>
+                <input type="checkbox" checked={f.is_foreign_national} onChange={e=>set("is_foreign_national",e.target.checked)} style={{width:15,height:15,accentColor:C.accent}}/>
+                <div><div style={{fontSize:12,fontWeight:700,color:f.is_foreign_national?C.accent:C.text}}>🌍 Foreign National</div><div style={{fontSize:10,color:C.text3}}>Not a Fijian citizen</div></div>
+              </label>
+              <label style={{display:"flex",alignItems:"center",gap:7,cursor:"pointer",padding:"8px 14px",borderRadius:8,border:`2px solid ${f.is_deportee?"#BA7517":C.border}`,background:f.is_deportee?"#FAEEDA":C.surface2,flex:1}}>
+                <input type="checkbox" checked={f.is_deportee} onChange={e=>set("is_deportee",e.target.checked)} style={{width:15,height:15,accentColor:"#BA7517"}}/>
+                <div><div style={{fontSize:12,fontWeight:700,color:f.is_deportee?"#633806":C.text}}>✈️ Deportee</div><div style={{fontSize:10,color:C.text3}}>Deported back to Fiji</div></div>
+              </label>
+            </div>
+
+            {f.is_foreign_national && (
+              <div style={{background:C.accentL,border:`1px solid #85B7EB`,borderRadius:8,padding:"12px",marginBottom:12}}>
+                <div style={{fontSize:11,fontWeight:700,color:C.accent,marginBottom:10,letterSpacing:"0.06em"}}>🌍 FOREIGN NATIONAL DETAILS</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Country of Origin</label>
+                    <select value={f.country_of_origin} onChange={e=>set("country_of_origin",e.target.value)} style={inp}>
+                      <option value="">— Select —</option>
+                      {NATIONALITIES.filter(n=>n!=="Fijian").map(n=><option key={n}>{n}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Passport Number</label>
+                    <input value={f.passport_number} onChange={e=>set("passport_number",e.target.value)} style={inp} placeholder="Passport / travel doc no."/>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Visa Status</label>
+                    <select value={f.visa_status} onChange={e=>set("visa_status",e.target.value)} style={inp}>
+                      <option value="">— Select —</option>
+                      {VISA_STATUSES.map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Entry Method</label>
+                    <select value={f.entry_method} onChange={e=>set("entry_method",e.target.value)} style={inp}>
+                      <option value="">— Select —</option>
+                      {ENTRY_METHODS.map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div style={{gridColumn:"1/-1",display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Known Smuggling Routes</label>
+                    <textarea value={f.known_routes} onChange={e=>set("known_routes",e.target.value)} rows={2} placeholder="e.g. Ecuador → Pacific → Fiji → Australia" style={{...inp,resize:"vertical"}}/>
+                  </div>
+                  <div style={{gridColumn:"1/-1",display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>International Links / Contacts</label>
+                    <textarea value={f.international_links} onChange={e=>set("international_links",e.target.value)} rows={2} placeholder="Known cartel contacts, overseas associates..." style={{...inp,resize:"vertical"}}/>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {f.is_deportee && (
+              <div style={{background:"#FAEEDA",border:`1px solid #FAC775`,borderRadius:8,padding:"12px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#633806",marginBottom:10,letterSpacing:"0.06em"}}>✈️ DEPORTEE DETAILS</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Deported From</label>
+                    <select value={f.deported_from} onChange={e=>set("deported_from",e.target.value)} style={inp}>
+                      <option value="">— Select country —</option>
+                      {DEPORTEE_SOURCES.map(v=><option key={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                    <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Deportation Year</label>
+                    <input type="number" value={f.deportation_year} onChange={e=>set("deportation_year",e.target.value)} style={inp} placeholder="e.g. 2022"/>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Criminal record */}
           <div style={{background:C.surface,borderRadius:10,padding:"16px",border:`1px solid ${C.border}`}}>
             <SectionLabel icon="⚖️">Criminal record</SectionLabel>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -486,10 +642,32 @@ function Modal({ record, onSave, onClose, allIds }) {
               {fg("Risk level","risk","text",["Low","Moderate","High","Severe"])} {fg("Status","status","text",["Wanted","In Custody","Released on Parole","Sentence Completed","Under Investigation"])}
               {fg("Associates","associates","number")} {fg("Convictions","convictions","number")}
               {fg("📅 Release date","release_date","date")}
+              <div style={{gridColumn:"1/-1",display:"flex",flexDirection:"column",gap:4}}>
+                <label style={{fontSize:11,fontWeight:600,color:C.text2}}>⚠️ Gang / Club Affiliation</label>
+                <select value={f.gang_affiliation} onChange={e=>set("gang_affiliation",e.target.value)} style={inp}>
+                  <option value="">None / Not Affiliated</option>
+                  {GANG_GROUPS.map(g=>(
+                    <optgroup key={g.group} label={`── ${g.group} ──`}>
+                      {g.gangs.map(name=><option key={name} value={name}>{name}</option>)}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+              {f.gang_affiliation && (
+                <div style={{gridColumn:"1/-1",display:"flex",flexDirection:"column",gap:4}}>
+                  <label style={{fontSize:11,fontWeight:600,color:C.text2}}>Gang Rank / Role</label>
+                  <select value={f.gang_rank} onChange={e=>set("gang_rank",e.target.value)} style={inp}>
+                    <option value="">— Select rank —</option>
+                    {GANG_RANKS.map(r=><option key={r}>{r}</option>)}
+                  </select>
+                </div>
+              )}
               <div style={{gridColumn:"1/-1"}}>{fg("Behavioural notes","behaviour","text",BEH,true)}</div>
               <div style={{gridColumn:"1/-1"}}>{fg("Psychological profile","psych","text",PSY,true)}</div>
             </div>
           </div>
+
+          {/* Case notes */}
           <div style={{background:C.surface,borderRadius:10,padding:"16px",border:`1px solid ${C.border}`}}>
             <SectionLabel icon="📝">Case notes</SectionLabel>
             <textarea value={f.case_notes} onChange={e=>set("case_notes",e.target.value)} rows={5} placeholder="Enter detailed case notes..." style={{...inp,resize:"vertical"}}/>
@@ -514,6 +692,9 @@ export default function App() {
   const [fStatus, setFStatus] = useState("");
   const [fLocation, setFLocation] = useState("");
   const [fGender, setFGender] = useState("");
+  const [fForeign, setFForeign] = useState(false);
+  const [fDeportee, setFDeportee] = useState(false);
+  const [fGang, setFGang] = useState("");
   const [sortCol, setSortCol] = useState("created_at");
   const [sortAsc, setSortAsc] = useState(false);
   const [view, setView] = useState("table");
@@ -546,11 +727,14 @@ export default function App() {
   }, []);
 
   const filtered = db.filter(r => {
-    if (query && !`${r.id} ${r.name} ${r.alias}`.toLowerCase().includes(query.toLowerCase())) return false;
+    if (query && !`${r.id} ${r.name} ${r.alias} ${r.gang_affiliation||""} ${r.country_of_origin||""}`.toLowerCase().includes(query.toLowerCase())) return false;
     if (fRisk && r.risk!==fRisk) return false;
     if (fStatus && r.status!==fStatus) return false;
     if (fLocation && r.location!==fLocation) return false;
     if (fGender && r.gender!==fGender) return false;
+    if (fForeign && !r.is_foreign_national) return false;
+    if (fDeportee && !r.is_deportee) return false;
+    if (fGang && r.gang_affiliation!==fGang) return false;
     return true;
   }).sort((a,b) => {
     const va=a[sortCol]??"", vb=b[sortCol]??"";
@@ -559,10 +743,8 @@ export default function App() {
   });
 
   const handleSort=(col)=>{ if(sortCol===col)setSortAsc(p=>!p); else{setSortCol(col);setSortAsc(true);} };
-
   const toggleSelect=(id,e)=>{ e.stopPropagation(); setSelected(prev=>{const n=new Set(prev);n.has(id)?n.delete(id):n.add(id);return n;}); };
   const toggleAll=()=>{ selected.size===filtered.length?setSelected(new Set()):setSelected(new Set(filtered.map(r=>r.id))); };
-
   const handlePrint=()=>{ const p=db.filter(r=>selected.has(r.id)); if(!p.length){showToast("Select at least one profile.");return;} printProfiles(p); };
   const printCurrent=(r)=>printProfiles([r]);
 
@@ -590,11 +772,8 @@ export default function App() {
     showToast("Profile deleted."); load();
   };
 
-  // Navigate to an associate's profile
   const navigateToProfile = (id) => {
-    setSelId(id);
-    setDpTab("details");
-    // Scroll to and highlight the row
+    setSelId(id); setDpTab("details");
     setTimeout(() => {
       const el = document.getElementById(`row-${id}`);
       if (el) el.scrollIntoView({ behavior:"smooth", block:"center" });
@@ -605,8 +784,9 @@ export default function App() {
   const wanted = db.filter(r=>r.status==="Wanted").length;
   const inCustody = db.filter(r=>r.status==="In Custody").length;
   const severe = db.filter(r=>r.risk==="Severe").length;
-  const withPhoto = db.filter(r=>r.photo_url).length;
-  const avgSen = db.length?Math.round(db.reduce((s,r)=>s+(r.sentence||0),0)/db.length):0;
+  const foreignCount = db.filter(r=>r.is_foreign_national).length;
+  const deporteeCount = db.filter(r=>r.is_deportee).length;
+  const gangCount = db.filter(r=>r.gang_affiliation).length;
 
   if (authLoading) return <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",color:C.accent}}>Loading...</div>;
 
@@ -622,8 +802,13 @@ export default function App() {
     color:active?C.accent:C.text3,
     borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",
     cursor:"pointer", background:"none", border:"none",
-    borderBottom:active?`2px solid ${C.accent}`:"2px solid transparent",
   });
+
+  const filterToggle = (active, onClick, label) => (
+    <button onClick={onClick} style={{...btnSm,height:32,background:active?C.accent:C.surface,color:active?"#fff":C.text2,border:`1px solid ${active?C.accent:C.border2}`,fontWeight:active?600:400}}>
+      {label}
+    </button>
+  );
 
   return (
     <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:C.bg,minHeight:"100vh",color:C.text}}>
@@ -652,12 +837,19 @@ export default function App() {
         )}
       </div>
 
-      {/* KPIs */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",background:C.surface,borderBottom:`1px solid ${C.border}`}}>
-        {[{l:"Wanted",v:wanted,c:"#7A1A1A",bg:"#FDEAEA",icon:"🔴"},{l:"In custody",v:inCustody,c:"#042C53",bg:"#E6F1FB",icon:"🔵"},{l:"Severe risk",v:severe,c:"#4A1B0C",bg:"#FAECE7",icon:"🟠"},{l:"Photos on file",v:withPhoto,c:"#173404",bg:"#EAF3DE",icon:"🟢"},{l:"Avg sentence",v:`${avgSen} yrs`,c:"#26215C",bg:"#EEEDFE",icon:"🟣"}].map(k=>(
-          <div key={k.l} style={{padding:"14px 20px",borderRight:`1px solid ${C.border}`,background:k.bg}}>
-            <div style={{fontSize:11,color:k.c,fontWeight:600,marginBottom:4,opacity:0.7}}>{k.icon} {k.l.toUpperCase()}</div>
-            <div style={{fontSize:24,fontWeight:700,color:k.c,letterSpacing:"-0.02em"}}>{k.v}</div>
+      {/* KPIs — Row 1 */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",background:C.surface,borderBottom:`1px solid ${C.border}`}}>
+        {[
+          {l:"Wanted",       v:wanted,        c:"#7A1A1A", bg:"#FDEAEA", icon:"🔴"},
+          {l:"In Custody",   v:inCustody,     c:"#042C53", bg:"#E6F1FB", icon:"🔵"},
+          {l:"Severe Risk",  v:severe,        c:"#4A1B0C", bg:"#FAECE7", icon:"🟠"},
+          {l:"Foreign Natl", v:foreignCount,  c:"#042C53", bg:"#E6F1FB", icon:"🌍"},
+          {l:"Deportees",    v:deporteeCount, c:"#412402", bg:"#FAEEDA", icon:"✈️"},
+          {l:"Gang Linked",  v:gangCount,     c:"#501313", bg:"#FDEAEA", icon:"⚠️"},
+        ].map(k=>(
+          <div key={k.l} style={{padding:"12px 16px",borderRight:`1px solid ${C.border}`,background:k.bg}}>
+            <div style={{fontSize:10,color:k.c,fontWeight:600,marginBottom:3,opacity:0.75}}>{k.icon} {k.l.toUpperCase()}</div>
+            <div style={{fontSize:22,fontWeight:700,color:k.c,letterSpacing:"-0.02em"}}>{k.v}</div>
           </div>
         ))}
       </div>
@@ -666,14 +858,30 @@ export default function App() {
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 20px",borderBottom:`1px solid ${C.border}`,background:C.surface,flexWrap:"wrap"}}>
         <div style={{position:"relative"}}>
           <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",color:C.text3,fontSize:14,pointerEvents:"none"}}>🔍</span>
-          <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, alias, ID..." style={{...inp,paddingLeft:30,width:220,height:32,fontSize:12}}/>
+          <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search name, alias, gang, ID..." style={{...inp,paddingLeft:30,width:230,height:32,fontSize:12}}/>
         </div>
-        {[{v:fRisk,s:setFRisk,opts:["All risk","Low","Moderate","High","Severe"]},{v:fStatus,s:setFStatus,opts:["All statuses","Wanted","In Custody","Released on Parole","Sentence Completed","Under Investigation"]},{v:fLocation,s:setFLocation,opts:["All locations",...LOCATIONS]},{v:fGender,s:setFGender,opts:["All genders","Male","Female"]}].map((f,i)=>(
+        {[
+          {v:fRisk,  s:setFRisk,     opts:["All risk","Low","Moderate","High","Severe"]},
+          {v:fStatus,s:setFStatus,   opts:["All statuses","Wanted","In Custody","Released on Parole","Sentence Completed","Under Investigation"]},
+          {v:fLocation,s:setFLocation,opts:["All locations",...LOCATIONS]},
+          {v:fGender,s:setFGender,   opts:["All genders","Male","Female"]},
+        ].map((f,i)=>(
           <select key={i} value={f.v} onChange={e=>f.s(e.target.value.startsWith("All ")?"":e.target.value)} style={{...inp,height:32,width:"auto",cursor:"pointer",fontSize:12}}>
             {f.opts.map(o=><option key={o}>{o}</option>)}
           </select>
         ))}
-        <button onClick={()=>{setQuery("");setFRisk("");setFStatus("");setFLocation("");setFGender("");}} style={{...btnSm,height:32}}>Clear</button>
+        {/* Gang filter */}
+        <select value={fGang} onChange={e=>setFGang(e.target.value)} style={{...inp,height:32,width:"auto",cursor:"pointer",fontSize:12}}>
+          <option value="">All gangs</option>
+          {GANG_GROUPS.map(g=>(
+            <optgroup key={g.group} label={g.group}>
+              {g.gangs.map(name=><option key={name} value={name}>{name}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        {filterToggle(fForeign, ()=>setFForeign(p=>!p), "🌍 Foreign")}
+        {filterToggle(fDeportee, ()=>setFDeportee(p=>!p), "✈️ Deportees")}
+        <button onClick={()=>{setQuery("");setFRisk("");setFStatus("");setFLocation("");setFGender("");setFForeign(false);setFDeportee(false);setFGang("");}} style={{...btnSm,height:32}}>Clear</button>
         <div style={{flex:1}}/>
         {selected.size>0?(
           <div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"#EBF2FF",border:`1px solid #85B7EB`,borderRadius:8}}>
@@ -693,7 +901,7 @@ export default function App() {
       </div>
 
       {/* Body */}
-      <div style={{display:"flex",height:"calc(100vh - 56px - 70px - 52px)"}}>
+      <div style={{display:"flex",height:"calc(100vh - 56px - 64px - 52px)"}}>
         <div style={{flex:1,overflow:"auto"}}>
           {loading?(
             <div style={{padding:48,textAlign:"center",color:C.accent}}>Loading profiles...</div>
@@ -704,7 +912,7 @@ export default function App() {
               <thead>
                 <tr style={{background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
                   <th style={{padding:"9px 12px",width:36}}><input type="checkbox" checked={selected.size===filtered.length&&filtered.length>0} onChange={toggleAll}/></th>
-                  {[["id","Case ID"],["",""],["name","Name"],["gender","Gender"],["risk","Risk"],["status","Status"],["primary_offence","Offence"],["location","Location"],["arrest_year","Year"],["",""]].map(([col,label],i)=>(
+                  {[["id","Case ID"],["",""],["name","Name"],["",""],["risk","Risk"],["status","Status"],["primary_offence","Offence"],["location","Loc."],["arrest_year","Year"],["",""]].map(([col,label],i)=>(
                     <th key={i} onClick={col?()=>handleSort(col):undefined} style={{padding:"9px 12px",textAlign:"left",fontSize:10,fontWeight:700,color:sortCol===col?C.accent:C.text3,letterSpacing:"0.07em",textTransform:"uppercase",cursor:col?"pointer":"default",userSelect:"none",whiteSpace:"nowrap",borderRight:i<9?`1px solid ${C.border}`:"none",background:C.surface2}}>
                       {label}{col&&sortCol===col&&<span style={{marginLeft:3,color:C.accent}}>{sortAsc?"↑":"↓"}</span>}
                     </th>
@@ -722,13 +930,19 @@ export default function App() {
                       <td style={{padding:"8px 12px"}} onClick={e=>e.stopPropagation()}><input type="checkbox" checked={isSel} onChange={e=>toggleSelect(r.id,e)}/></td>
                       <td style={{padding:"8px 12px",fontFamily:"monospace",fontSize:11,color:C.text3}}>{r.id}</td>
                       <td style={{padding:"4px 6px"}}><Avatar r={r} size={28}/></td>
-                      <td style={{padding:"8px 12px",fontWeight:600,color:C.text,maxWidth:150,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.name}</td>
-                      <td style={{padding:"8px 12px",color:C.text2,fontSize:11}}>{r.gender}</td>
-                      <td style={{padding:"8px 12px"}}><Badge label={r.risk} style={RISK_STYLE[r.risk]}/></td>
-                      <td style={{padding:"8px 12px"}}><Badge label={r.status} style={STATUS_STYLE[r.status]}/></td>
-                      <td style={{padding:"8px 12px"}}><span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:oc.text||C.text2}}>{oc.dot&&<span style={{width:7,height:7,borderRadius:"50%",background:oc.dot}}/>}{r.primary_offence}</span></td>
-                      <td style={{padding:"8px 12px",color:C.text2,fontSize:11}}>{r.location}</td>
-                      <td style={{padding:"8px 12px",color:C.text3,fontSize:11,fontFamily:"monospace"}}>{r.arrest_year}</td>
+                      <td style={{padding:"8px 6px",fontWeight:600,color:C.text,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {r.name}
+                        <div style={{display:"flex",gap:3,marginTop:2,flexWrap:"wrap"}}>
+                          {r.is_foreign_national&&<span style={{fontSize:9,background:"#E6F1FB",color:"#042C53",padding:"1px 5px",borderRadius:3,fontWeight:600}}>🌍 INTL</span>}
+                          {r.is_deportee&&<span style={{fontSize:9,background:"#FAEEDA",color:"#633806",padding:"1px 5px",borderRadius:3,fontWeight:600}}>✈️ DEP</span>}
+                          {r.gang_affiliation&&<span style={{fontSize:9,background:"#FDEAEA",color:"#7A1A1A",padding:"1px 5px",borderRadius:3,fontWeight:600}}>⚠️ GANG</span>}
+                        </div>
+                      </td>
+                      <td style={{padding:"8px 6px"}}><Badge label={r.risk} style={RISK_STYLE[r.risk]}/></td>
+                      <td style={{padding:"8px 6px"}}><Badge label={r.status} style={STATUS_STYLE[r.status]}/></td>
+                      <td style={{padding:"8px 6px"}}><span style={{display:"inline-flex",alignItems:"center",gap:4,fontSize:11,color:oc.text||C.text2}}>{oc.dot&&<span style={{width:7,height:7,borderRadius:"50%",background:oc.dot}}/>}{r.primary_offence}</span></td>
+                      <td style={{padding:"8px 6px",color:C.text2,fontSize:11}}>{r.location}</td>
+                      <td style={{padding:"8px 6px",color:C.text3,fontSize:11,fontFamily:"monospace"}}>{r.arrest_year}</td>
                       <td style={{padding:"8px 10px"}}>
                         <div style={{display:"flex",gap:2}}>
                           <button onClick={e=>{e.stopPropagation();printCurrent(r);}} style={{...btnSm,padding:"3px 7px",fontSize:11,background:"#EAF3DE",color:"#1E7E34",border:"1px solid #97C459"}}>🖨️</button>
@@ -760,9 +974,16 @@ export default function App() {
                         <div style={{fontSize:11,color:C.text3}}>{r.location}</div>
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>
+                    <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:6}}>
                       <Badge label={r.risk} style={RISK_STYLE[r.risk]}/><Badge label={r.status} style={STATUS_STYLE[r.status]}/>
                     </div>
+                    {(r.is_foreign_national||r.is_deportee||r.gang_affiliation)&&(
+                      <div style={{display:"flex",gap:3,flexWrap:"wrap",marginBottom:6}}>
+                        {r.is_foreign_national&&<span style={{fontSize:9,background:"#E6F1FB",color:"#042C53",padding:"2px 6px",borderRadius:3,fontWeight:700}}>🌍 Foreign</span>}
+                        {r.is_deportee&&<span style={{fontSize:9,background:"#FAEEDA",color:"#633806",padding:"2px 6px",borderRadius:3,fontWeight:700}}>✈️ Deportee</span>}
+                        {r.gang_affiliation&&<span style={{fontSize:9,background:"#FDEAEA",color:"#7A1A1A",padding:"2px 6px",borderRadius:3,fontWeight:700}}>⚠️ Gang</span>}
+                      </div>
+                    )}
                     <div style={{fontSize:11,padding:"5px 8px",borderRadius:5,background:oc.bg||C.surface2,color:oc.text||C.text2,border:`1px solid ${oc.border||C.border}`,display:"flex",alignItems:"center",gap:4,marginBottom:8}}>
                       {oc.dot&&<span style={{width:6,height:6,borderRadius:"50%",background:oc.dot}}/>}{r.primary_offence}
                     </div>
@@ -775,7 +996,7 @@ export default function App() {
         </div>
 
         {/* Detail Panel */}
-        <div style={{width:300,borderLeft:`1px solid ${C.border}`,background:C.surface,flexShrink:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{width:310,borderLeft:`1px solid ${C.border}`,background:C.surface,flexShrink:0,display:"flex",flexDirection:"column",overflow:"hidden"}}>
           {!sel?(
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:10,padding:24}}>
               <div style={{fontSize:40,opacity:0.3}}>👤</div>
@@ -783,33 +1004,33 @@ export default function App() {
             </div>
           ):(
             <>
-              {/* Profile header */}
               <div style={{background:C.nav,padding:"14px 14px 12px",flexShrink:0}}>
                 <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:10}}>
                   <Avatar r={sel} size={50}/>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>{sel.name}</div>
-                    <div style={{fontSize:10,color:C.navMuted,fontFamily:"monospace",marginTop:2}}>{sel.id} · {sel.alias}</div>
-                    <div style={{fontSize:11,color:C.navMuted,marginTop:2}}>{sel.occupation}</div>
+                    <div style={{fontSize:10,color:C.navMuted,fontFamily:"monospace",marginTop:2}}>{sel.id} · {sel.alias||"—"}</div>
+                    <div style={{fontSize:11,color:C.navMuted,marginTop:2}}>{sel.occupation} · {sel.nationality||"Fijian"}</div>
                   </div>
                 </div>
                 <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
                   <Badge label={`${sel.risk} risk`} style={RISK_STYLE[sel.risk]}/>
                   <Badge label={sel.status} style={STATUS_STYLE[sel.status]}/>
+                  {sel.is_foreign_national&&<Badge label="🌍 Foreign" style={{bg:"#E6F1FB",text:"#042C53",border:"#85B7EB"}}/>}
+                  {sel.is_deportee&&<Badge label={`✈️ Dep. ${sel.deported_from||""}`} style={{bg:"#FAEEDA",text:"#412402",border:"#FAC775"}}/>}
+                  {sel.gang_affiliation&&<Badge label={`⚠️ ${sel.gang_affiliation}`} style={{bg:"#FDEAEA",text:"#7A1A1A",border:"#F0A0A0"}}/>}
                 </div>
               </div>
 
-              {/* Tabs */}
               <div style={{display:"flex",borderBottom:`1px solid ${C.border}`,background:C.surface,flexShrink:0}}>
                 <button style={tabStyle(dpTab==="details")} onClick={()=>setDpTab("details")}>Details</button>
-                <button style={tabStyle(dpTab==="associates")} onClick={()=>setDpTab("associates")}>🔗 Associates</button>
+                <button style={tabStyle(dpTab==="intl")} onClick={()=>setDpTab("intl")}>🌍 Intl</button>
+                <button style={tabStyle(dpTab==="associates")} onClick={()=>setDpTab("associates")}>🔗 Links</button>
               </div>
 
-              {/* Tab content */}
               <div style={{flex:1,overflowY:"auto"}}>
                 {dpTab==="details"&&(
                   <div>
-                    {/* Biometric strip */}
                     <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
                       {sel.thumb_url?<img src={sel.thumb_url} alt="" style={{width:40,height:40,borderRadius:6,objectFit:"cover",border:`1px solid ${C.border2}`}}/>:<div style={{width:40,height:40,borderRadius:6,background:C.surface,border:`1px dashed ${C.border2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:C.text3}}>🖐</div>}
                       <div style={{fontSize:11,lineHeight:1.6}}>
@@ -817,7 +1038,6 @@ export default function App() {
                         <div style={{color:C.text3}}>{sel.photo_url?"✓ Photo on file":"No photo"}</div>
                       </div>
                     </div>
-                    {/* Offence highlight */}
                     {sel.primary_offence&&(()=>{const oc=OFFENCE_COLOR[sel.primary_offence]||{};return(
                       <div style={{margin:"10px 14px",padding:"8px 12px",borderRadius:8,background:oc.bg||C.surface2,border:`1px solid ${oc.border||C.border}`,display:"flex",alignItems:"center",gap:6}}>
                         {oc.dot&&<span style={{width:8,height:8,borderRadius:"50%",background:oc.dot}}/>}
@@ -830,14 +1050,24 @@ export default function App() {
                     );})()}
                     <div style={{padding:"8px 14px",display:"flex",flexDirection:"column",gap:0}}>
                       <div style={{fontSize:10,fontWeight:700,color:C.text3,letterSpacing:"0.08em",textTransform:"uppercase",padding:"8px 0 4px"}}>Personal</div>
-                      <DPRow label="Date of birth" value={sel.dob}/><DPRow label="Gender" value={sel.gender}/>
-                      <DPRow label="Phone" value={sel.phone_number} icon="📞"/><DPRow label="Address" value={sel.home_address} icon="🏠"/>
-                      <DPRow label="Vehicle" value={sel.vehicle_registration} icon="🚗"/><DPRow label="Family" value={sel.family_members} icon="👨‍👩‍👧"/>
+                      <DPRow label="Date of birth" value={sel.dob}/>
+                      <DPRow label="Gender" value={sel.gender}/>
+                      <DPRow label="Nationality" value={sel.nationality}/>
+                      <DPRow label="Phone" value={sel.phone_number} icon="📞"/>
+                      <DPRow label="Address" value={sel.home_address} icon="🏠"/>
+                      <DPRow label="Vehicle" value={sel.vehicle_registration} icon="🚗"/>
+                      <DPRow label="Family" value={sel.family_members} icon="👨‍👩‍👧"/>
                       <DPRow label="Medical" value={sel.medical_conditions} icon="🏥"/>
                       <div style={{fontSize:10,fontWeight:700,color:C.text3,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 0 4px"}}>Criminal record</div>
-                      <DPRow label="Arrest year" value={sel.arrest_year}/><DPRow label="Sentence" value={`${sel.sentence} years`}/>
-                      <DPRow label="Release date" value={sel.release_date} icon="📅"/><DPRow label="Associates" value={sel.associates}/>
+                      <DPRow label="Arrest year" value={sel.arrest_year}/>
+                      <DPRow label="Sentence" value={`${sel.sentence} years`}/>
+                      <DPRow label="Release date" value={sel.release_date} icon="📅"/>
                       <DPRow label="Convictions" value={sel.convictions}/>
+                      {sel.gang_affiliation&&<>
+                        <div style={{fontSize:10,fontWeight:700,color:"#7A1A1A",letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 0 4px"}}>⚠️ Gang Affiliation</div>
+                        <DPRow label="Gang / Club" value={sel.gang_affiliation}/>
+                        <DPRow label="Rank" value={sel.gang_rank}/>
+                      </>}
                       <div style={{fontSize:10,fontWeight:700,color:C.text3,letterSpacing:"0.08em",textTransform:"uppercase",padding:"10px 0 4px"}}>Profile</div>
                       <div style={{fontSize:11,color:C.text2,lineHeight:1.6,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>{sel.behaviour}</div>
                       <div style={{fontSize:11,color:C.text3,fontStyle:"italic",lineHeight:1.6,padding:"6px 0"}}>{sel.psych}</div>
@@ -848,18 +1078,46 @@ export default function App() {
                     </div>
                   </div>
                 )}
+
+                {dpTab==="intl"&&(
+                  <div style={{padding:"12px 14px"}}>
+                    {!sel.is_foreign_national && !sel.is_deportee && (
+                      <div style={{fontSize:12,color:C.text3,fontStyle:"italic",textAlign:"center",padding:"24px 0"}}>No international profile data for this record.</div>
+                    )}
+                    {sel.is_foreign_national&&(
+                      <div style={{marginBottom:14}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"#042C53",letterSpacing:"0.08em",textTransform:"uppercase",padding:"6px 10px",background:"#E6F1FB",borderRadius:6,marginBottom:8}}>🌍 Foreign National</div>
+                        <DPRow label="Country of Origin" value={sel.country_of_origin}/>
+                        <DPRow label="Passport No." value={sel.passport_number}/>
+                        <DPRow label="Visa Status" value={sel.visa_status}/>
+                        <DPRow label="Entry Method" value={sel.entry_method}/>
+                        {sel.known_routes&&<>
+                          <div style={{fontSize:10,fontWeight:700,color:C.text3,marginTop:10,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.06em"}}>Known Routes</div>
+                          <div style={{fontSize:11,color:C.text2,lineHeight:1.6,background:C.surface2,padding:"8px 10px",borderRadius:6,border:`1px solid ${C.border}`,marginBottom:8}}>{sel.known_routes}</div>
+                        </>}
+                        {sel.international_links&&<>
+                          <div style={{fontSize:10,fontWeight:700,color:C.text3,marginTop:6,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.06em"}}>International Links</div>
+                          <div style={{fontSize:11,color:C.text2,lineHeight:1.6,background:C.surface2,padding:"8px 10px",borderRadius:6,border:`1px solid ${C.border}`}}>{sel.international_links}</div>
+                        </>}
+                      </div>
+                    )}
+                    {sel.is_deportee&&(
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:"#412402",letterSpacing:"0.08em",textTransform:"uppercase",padding:"6px 10px",background:"#FAEEDA",borderRadius:6,marginBottom:8}}>✈️ Deportee</div>
+                        <DPRow label="Deported From" value={sel.deported_from}/>
+                        <DPRow label="Deportation Year" value={sel.deportation_year}/>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {dpTab==="associates"&&(
                   <div style={{padding:"12px 14px"}}>
-                    <AssociatesPanel
-                      profileId={sel.id}
-                      onNavigate={navigateToProfile}
-                      canEdit={!!user}
-                    />
+                    <AssociatesPanel profileId={sel.id} onNavigate={navigateToProfile} canEdit={!!user}/>
                   </div>
                 )}
               </div>
 
-              {/* Action buttons */}
               <div style={{padding:"10px 14px",borderTop:`1px solid ${C.border}`,display:"flex",flexDirection:"column",gap:6,background:C.surface,flexShrink:0}}>
                 <button onClick={()=>printCurrent(sel)} style={{...btnGreen,justifyContent:"center",width:"100%"}}>🖨️ Print this profile</button>
                 {user&&(
@@ -876,7 +1134,7 @@ export default function App() {
 
       {/* Footer */}
       <div style={{display:"flex",alignItems:"center",padding:"8px 20px",borderTop:`1px solid ${C.border}`,background:C.surface,gap:14,flexWrap:"wrap"}}>
-        <span style={{fontSize:11,color:C.text3}}>{filtered.length} profiles · {wanted} wanted · {severe} severe risk</span>
+        <span style={{fontSize:11,color:C.text3}}>{filtered.length} profiles · {wanted} wanted · {severe} severe risk · {foreignCount} foreign · {deporteeCount} deportees</span>
         {selected.size>0&&<span style={{fontSize:11,color:C.accent,fontWeight:600}}>{selected.size} selected</span>}
         <div style={{flex:1}}/>
         <span style={{fontSize:11,color:C.text3}}>Fiji Central Criminal Intelligence · FY2026 · Confidential</span>
