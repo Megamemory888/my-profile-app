@@ -321,7 +321,7 @@ function LoginPage({onLogin}) {
             </div>
           </div>
           <div className="login-left-footer" style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:20,display:"flex",justifyContent:"space-between"}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>© 2026 NCIC · Fiji Police Force</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>© 2026 NCIC</div>
             <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>VERSION 2.4</div>
           </div>
         </div>
@@ -360,7 +360,7 @@ function LoginPage({onLogin}) {
               <div style={{fontSize:11,fontWeight:700,color:"#92400E",letterSpacing:"0.06em",marginBottom:4}}>⚠ AUTHORISED ACCESS ONLY</div>
               <div style={{fontSize:11,color:"#92400E",lineHeight:1.6}}>This system contains classified law enforcement data. Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
             </div>
-            <div style={{marginTop:16,textAlign:"center",fontSize:11,color:"#B0B7C3"}}>© 2026 NCIC · Fiji Police Force</div>
+            <div style={{marginTop:16,textAlign:"center",fontSize:11,color:"#B0B7C3"}}>© 2026 NCIC</div>
           </div>
         </div>
       </div>
