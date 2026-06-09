@@ -674,6 +674,7 @@ export default function App() {
   const [fGender,setFGender]=useState("");const [fNat,setFNat]=useState("");
   const [sortCol,setSortCol]=useState("created_at");const [sortAsc,setSortAsc]=useState(false);
   const [view,setView]=useState("table");const [selId,setSelId]=useState(null);
+  const [quickTab,setQuickTab]=useState("all");
   const [modal,setModal]=useState(null);const [toast,setToast]=useState("");
   const [selected,setSelected]=useState(new Set());const [dpTab,setDpTab]=useState("details");
 
@@ -722,6 +723,8 @@ export default function App() {
     if(fLocation&&r.location!==fLocation)return false;
     if(fGender&&r.gender!==fGender)return false;
     if(fNat&&r.nationality_type!==fNat)return false;
+    if(quickTab==="foreign"&&r.nationality_type!=="Foreign National")return false;
+    if(quickTab==="deportees"&&!["Deported","Awaiting Deportation","Deportation Pending"].includes(r.deportation_status))return false;
     return true;
   }).sort((a,b)=>{
     const va=a[sortCol]??"",vb=b[sortCol]??"";
@@ -804,6 +807,32 @@ export default function App() {
           <div style={{fontSize:10,color:k.c,fontWeight:600,marginBottom:4,opacity:0.7}}>{k.icon} {k.l.toUpperCase()}</div>
           <div style={{fontSize:22,fontWeight:700,color:k.c,letterSpacing:"-0.02em"}}>{k.v}</div>
         </div>
+      ))}
+    </div>
+
+    {/* Quick Filter Tabs */}
+    <div style={{display:"flex",alignItems:"center",background:C.surface,borderBottom:`1px solid ${C.border}`,padding:"0 20px",gap:4}}>
+      {[
+        {id:"all",label:"All Profiles",icon:"🗂️"},
+        {id:"foreign",label:"Foreign Nationals",icon:"🌍"},
+        {id:"deportees",label:"Deportees",icon:"✈️"},
+      ].map(t=>(
+        <button key={t.id} onClick={()=>setQuickTab(t.id)} style={{
+          padding:"10px 16px",fontSize:12,fontWeight:quickTab===t.id?700:500,
+          color:quickTab===t.id?(t.id==="foreign"?C.foreign:t.id==="deportees"?"#92400E":C.accent):C.text3,
+          borderBottom:quickTab===t.id?`3px solid ${t.id==="foreign"?C.foreign:t.id==="deportees"?"#D97706":C.accent}`:"3px solid transparent",
+          background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:6,whiteSpace:"nowrap",
+          borderRadius:0,
+        }}>
+          {t.icon} {t.label}
+          <span style={{
+            background:quickTab===t.id?(t.id==="foreign"?C.foreignBg:t.id==="deportees"?"#FEF3C7":C.accentL):"#F0F2F5",
+            color:quickTab===t.id?(t.id==="foreign"?C.foreign:t.id==="deportees"?"#92400E":C.accent):C.text3,
+            borderRadius:99,padding:"1px 7px",fontSize:10,fontWeight:600,
+          }}>
+            {t.id==="all"?db.length:t.id==="foreign"?db.filter(r=>r.nationality_type==="Foreign National").length:db.filter(r=>["Deported","Awaiting Deportation","Deportation Pending"].includes(r.deportation_status)).length}
+          </span>
+        </button>
       ))}
     </div>
 
