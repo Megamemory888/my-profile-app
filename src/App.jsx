@@ -99,11 +99,11 @@ function Avatar({r,size=40}) {
   const rs = RISK_STYLE[r.risk]||{};
   const isForeign = r.nationality_type==="Foreign National";
   if (r.photo_url) return <div style={{position:"relative",flexShrink:0}}>
-    <img src={r.photo_url} alt="" style={{width:size,height:size,borderRadius:"50%",objectFit:"cover",border:`2px solid ${isForeign?C.foreignBorder:rs.border||C.border}`}}/>
+    <img src={r.photo_url} alt="" style={{width:size,height:size,borderRadius:3,objectFit:"cover",objectPosition:"top center",border:`2px solid ${isForeign?C.foreignBorder:rs.border||C.border}`}}/>
     {isForeign&&<span style={{position:"absolute",bottom:-2,right:-2,fontSize:10,background:C.foreignBg,borderRadius:"50%",width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.foreignBorder}`}}>🌍</span>}
   </div>;
   return <div style={{position:"relative",flexShrink:0}}>
-    <div style={{width:size,height:size,borderRadius:"50%",background:isForeign?C.foreignBg:rs.bg||C.accentL,color:isForeign?C.foreign:rs.text||C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.3),fontWeight:600,border:`2px solid ${isForeign?C.foreignBorder:rs.border||C.border}`,letterSpacing:"0.05em"}}>{ini}</div>
+    <div style={{width:size,height:size,borderRadius:3,background:isForeign?C.foreignBg:rs.bg||C.accentL,color:isForeign?C.foreign:rs.text||C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:Math.round(size*0.3),fontWeight:600,border:`2px solid ${isForeign?C.foreignBorder:rs.border||C.border}`,letterSpacing:"0.05em"}}>{ini}</div>
     {isForeign&&<span style={{position:"absolute",bottom:-2,right:-2,fontSize:10,background:C.foreignBg,borderRadius:"50%",width:16,height:16,display:"flex",alignItems:"center",justifyContent:"center",border:`1px solid ${C.foreignBorder}`}}>🌍</span>}
   </div>;
 }
@@ -570,7 +570,7 @@ function Modal({record,onSave,onClose,allIds}) {
               <div style={{fontSize:11,fontWeight:600,color:C.text2,marginBottom:8}}>Profile photo</div>
               <label style={{display:"block",cursor:"pointer"}}>
                 <div style={{border:`1.5px dashed ${C.border2}`,borderRadius:8,padding:12,textAlign:"center",minHeight:90,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,background:C.surface2}}>
-                  {(f.photoData||f.photo_url)?<img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:"50%",objectFit:"cover",border:`2px solid ${isForeign?C.foreign:C.accent}`}}/>:<><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:C.text3}}>Click to upload</div></>}
+                  {(f.photoData||f.photo_url)?<img src={f.photoData||f.photo_url} alt="" style={{width:64,height:64,borderRadius:3,objectFit:"cover",objectPosition:"top center",border:`2px solid ${isForeign?C.foreign:C.accent}`}}/>:<><div style={{fontSize:26}}>📷</div><div style={{fontSize:11,color:C.text3}}>Click to upload</div></>}
                 </div>
                 <input type="file" accept="image/*" style={{display:"none"}} onChange={e=>{const fl=e.target.files[0];if(!fl)return;const fr=new FileReader();fr.onload=ev=>set("photoData",ev.target.result);fr.readAsDataURL(fl);}}/>
               </label>
