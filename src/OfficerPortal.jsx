@@ -4,6 +4,7 @@ import { supabase } from "./supabaseClient";
 const STATIONS = ["Suva Central","Nausori","Lautoka","Nadi","Ba","Labasa","Savusavu","Sigatoka","Rakiraki","Levuka","Nasinu","Valelevu","Nabua","Other"];
 const RANKS = ["Constable","Senior Constable","Corporal","Sergeant","Senior Sergeant","Inspector","Senior Inspector","Superintendent","Other"];
 const NATIONALITIES = ["Fijian","Australian","New Zealander","Indian","Chinese","American","British","Other"];
+const CLEARANCE_PURPOSES = ["Employment — Government","Employment — Private Sector","Visa Application","Travel / Immigration","Residency Application","Firearm Licence","Working with Children","Adoption","Other"];
 const OFFENCE_TYPES = ["Assault","Theft","Burglary","Robbery","Armed Robbery","Fraud / Scam","Sexual Offence","Domestic Violence","Drug Offence","Vandalism / Property Damage","Trespassing","Kidnapping / Abduction","Cybercrime","Murder / Manslaughter","Missing Person","Other"];
 const ACCIDENT_TYPES = ["Head-on Collision","Rear-end Collision","Side Collision","Single Vehicle","Hit and Run","Pedestrian Struck","Cyclist Struck","Rollover","Other"];
 const ROAD_CONDITIONS = ["Dry — Good","Wet — Rain","Foggy / Low visibility","Night — Poor lighting","Roadworks","Other"];
@@ -607,6 +608,296 @@ function ReportsList({ officer, viewAll }) {
   );
 }
 
+// ─── POLICE CLEARANCE ────────────────────────────────────────────────────────
+function PoliceClearance({ officer }) {
+  const [step, setStep]         = useState("form"); // form | results | issued
+  const [saving, setSaving]     = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [matches, setMatches]   = useState(null);   // null = not searched yet
+  const [chosen, setChosen]     = useState(null);   // selected match or "none"
+  const [successId, setSuccessId] = useState(null);
+  const [history, setHistory]   = useState(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const [f, setF] = useState({
+    applicant_name:"", applicant_dob:"", applicant_gender:"Male",
+    applicant_nationality:"Fijian", applicant_id_number:"",
+    applicant_phone:"", applicant_address:"", applicant_email:"",
+    purpose:"Employment — Government", officer_notes:"",
+  });
+  const set = (k,v) => { setF(p=>({...p,[k]:v})); setMatches(null); setChosen(null); };
+
+  const RISK_COLOR = { Low:"#166534", Moderate:"#92400E", High:"#B45309", Severe:"#991B1B" };
+  const RISK_BG    = { Low:"#DCFCE7", Moderate:"#FEF3C7", High:"#FFEDD5", Severe:"#FEE2E2" };
+
+  const searchDatabase = async () => {
+    if (!f.applicant_name.trim()) { alert("Enter the applicant's full name first."); return; }
+    setSearching(true); setChosen(null);
+    const name = f.applicant_name.trim();
+    // Split into words for wider match
+    const parts = name.split(" ").filter(Boolean);
+    let q = supabase.from("criminal_profiles")
+      .select("id,name,alias,dob,gender,risk,status,primary_offence,secondary_offence,convictions,nationality_type,photo_url,gang_affiliation")
+      .order("risk", {ascending:false})
+      .limit(10);
+    // Build OR: match any word in name, alias, or exact DOB
+    const orClauses = parts.flatMap(p=>[`name.ilike.%${p}%`,`alias.ilike.%${p}%`]);
+    if (f.applicant_dob) orClauses.push(`dob.eq.${f.applicant_dob}`);
+    q = q.or(orClauses.join(","));
+    const { data } = await q;
+    setMatches(data || []);
+    setSearching(false);
+  };
+
+  const issue = async () => {
+    setSaving(true);
+    const year = new Date().getFullYear();
+    const { count } = await supabase.from("police_clearances").select("*",{count:"exact",head:true}).like("clearance_id",`PC-${year}-%`);
+    const newId = `PC-${year}-${String((count||0)+1).padStart(5,"0")}`;
+    const isClean = chosen === "none" || !chosen;
+    const record = {
+      clearance_id: newId,
+      officer_user_id: officer.user_id,
+      officer_name: officer.full_name,
+      officer_badge: officer.badge_number,
+      officer_station: officer.station,
+      officer_rank: officer.rank,
+      applicant_name: f.applicant_name,
+      applicant_dob: f.applicant_dob || null,
+      applicant_gender: f.applicant_gender,
+      applicant_nationality: f.applicant_nationality,
+      applicant_id_number: f.applicant_id_number,
+      applicant_phone: f.applicant_phone,
+      applicant_address: f.applicant_address,
+      applicant_email: f.applicant_email,
+      purpose: f.purpose,
+      search_result: isClean ? "clear" : "record_found",
+      matched_profile_id: isClean ? null : chosen?.id,
+      officer_notes: f.officer_notes,
+      status: isClean ? "Issued" : "Record Found — Refer to Supervisor",
+    };
+    const { error } = await supabase.from("police_clearances").insert([record]);
+    setSaving(false);
+    if (error) { alert("Error saving clearance: " + error.message); return; }
+    setSuccessId(newId);
+    setStep("issued");
+  };
+
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    const { data } = await supabase.from("police_clearances")
+      .select("*").eq("officer_user_id", officer.user_id)
+      .order("created_at",{ascending:false}).limit(50);
+    setHistory(data||[]);
+    setLoadingHistory(false);
+  };
+
+  const resetForm = () => {
+    setF({ applicant_name:"", applicant_dob:"", applicant_gender:"Male", applicant_nationality:"Fijian", applicant_id_number:"", applicant_phone:"", applicant_address:"", applicant_email:"", purpose:"Employment — Government", officer_notes:"" });
+    setMatches(null); setChosen(null); setStep("form"); setSuccessId(null);
+  };
+
+  const RESULT_STYLE = {
+    "Issued":                          { bg:"#DCFCE7", text:"#166534", border:"#6EE7B7" },
+    "Record Found — Refer to Supervisor":{ bg:"#FEE2E2", text:"#991B1B", border:"#FCA5A5" },
+    "Pending":                         { bg:"#FEF3C7", text:"#92400E", border:"#FCD34D" },
+  };
+
+  // ── Issued view
+  if (step === "issued") return (
+    <div style={{ maxWidth:680, margin:"0 auto", padding:"40px 24px", textAlign:"center" }}>
+      <div style={{ width:64, height:64, borderRadius:"50%", background:"#DCFCE7", border:"3px solid #6EE7B7", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:28 }}>✓</div>
+      <div style={{ fontSize:20, fontWeight:700, color:"#166534", marginBottom:6 }}>Clearance Recorded</div>
+      <div style={{ fontSize:13, color:C.text3, marginBottom:4 }}>Reference: <strong style={{ fontFamily:"monospace", color:C.text }}>{successId}</strong></div>
+      <div style={{ fontSize:12, color:C.text3, marginBottom:24 }}>Applicant: <strong>{f.applicant_name}</strong></div>
+      <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+        <button onClick={resetForm} style={{ ...btnBlue, padding:"9px 20px" }}>+ New Clearance</button>
+        <button onClick={()=>{ setStep("history"); loadHistory(); }} style={{ ...btnSm, padding:"9px 20px" }}>View History</button>
+      </div>
+    </div>
+  );
+
+  // ── History view
+  if (step === "history") return (
+    <div style={{ padding:"16px 24px", maxWidth:900, margin:"0 auto" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+        <button onClick={()=>setStep("form")} style={btnSm}>← New Clearance</button>
+        <div style={{ fontSize:15, fontWeight:700, color:C.text }}>My Clearance Records</div>
+        <button onClick={loadHistory} style={{...btnSm,marginLeft:"auto"}}>↻ Refresh</button>
+      </div>
+      {loadingHistory ? (
+        <div style={{ padding:40, textAlign:"center", color:C.text3 }}>Loading...</div>
+      ) : !history || history.length === 0 ? (
+        <div style={{ padding:40, textAlign:"center", color:C.text3 }}>No clearance records yet.</div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {history.map(r=>(
+            <div key={r.clearance_id} style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:6, padding:"12px 16px", display:"flex", alignItems:"center", gap:14, borderLeft:`4px solid ${r.search_result==="clear"?"#22C55E":"#DC2626"}` }}>
+              <div style={{ fontSize:22 }}>{r.search_result==="clear"?"✅":"⚠️"}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
+                  <span style={{ fontSize:10, color:C.text3, fontFamily:"monospace" }}>{r.clearance_id}</span>
+                  <span style={{ fontSize:12, fontWeight:700, color:C.text }}>{r.applicant_name}</span>
+                </div>
+                <div style={{ fontSize:11, color:C.text3 }}>{r.purpose} · {r.applicant_nationality} · DOB: {r.applicant_dob||"—"}</div>
+              </div>
+              <Badge label={r.status} style={RESULT_STYLE[r.status]||{bg:"#eee",text:"#333",border:"#ccc"}}/>
+              <div style={{ fontSize:10, color:C.text3, textAlign:"right" }}>{new Date(r.created_at).toLocaleDateString()}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── Main form + results
+  const hasSearched = matches !== null;
+  const isClean = hasSearched && (matches.length === 0 || chosen === "none");
+  const hasRecord = hasSearched && chosen && chosen !== "none";
+
+  return (
+    <div style={{ maxWidth:820, margin:"0 auto", padding:"24px" }}>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, paddingBottom:16, borderBottom:`2px solid ${C.border}` }}>
+        <div style={{ width:44, height:44, borderRadius:4, background:"#E8EFFD", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, border:"1px solid #93B4F0" }}>📋</div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:16, fontWeight:700, color:C.text }}>Police Clearance Check</div>
+          <div style={{ fontSize:11, color:C.text3 }}>Search the criminal database and issue a clearance record</div>
+        </div>
+        <button onClick={()=>{ setStep("history"); loadHistory(); }} style={btnSm}>📂 View History</button>
+      </div>
+
+      {/* Applicant Details */}
+      <Section title="Applicant Details" icon="👤" color="#1447C4">
+        <Field label="Full Legal Name" required>
+          <input value={f.applicant_name} onChange={e=>set("applicant_name",e.target.value)} placeholder="As on ID document" style={inp}/>
+        </Field>
+        <Field label="Date of Birth">
+          <input type="date" value={f.applicant_dob} onChange={e=>set("applicant_dob",e.target.value)} style={inp}/>
+        </Field>
+        <Field label="Gender">
+          <select value={f.applicant_gender} onChange={e=>set("applicant_gender",e.target.value)} style={inp}>
+            {["Male","Female","Other"].map(g=><option key={g}>{g}</option>)}
+          </select>
+        </Field>
+        <Field label="Nationality">
+          <select value={f.applicant_nationality} onChange={e=>set("applicant_nationality",e.target.value)} style={inp}>
+            {NATIONALITIES.map(n=><option key={n}>{n}</option>)}
+          </select>
+        </Field>
+        <Field label="ID / Passport Number" hint="Social Welfare No., Passport, Driver's Licence, etc.">
+          <input value={f.applicant_id_number} onChange={e=>set("applicant_id_number",e.target.value)} placeholder="e.g. F123456 or EC-4412345" style={inp}/>
+        </Field>
+        <Field label="Phone Number">
+          <input value={f.applicant_phone} onChange={e=>set("applicant_phone",e.target.value)} placeholder="e.g. 9751234" style={inp}/>
+        </Field>
+        <Field label="Home Address" full>
+          <input value={f.applicant_address} onChange={e=>set("applicant_address",e.target.value)} placeholder="Full residential address" style={inp}/>
+        </Field>
+        <Field label="Email" full>
+          <input type="email" value={f.applicant_email} onChange={e=>set("applicant_email",e.target.value)} placeholder="Optional" style={inp}/>
+        </Field>
+        <Field label="Purpose of Clearance" full>
+          <select value={f.purpose} onChange={e=>set("purpose",e.target.value)} style={inp}>
+            {CLEARANCE_PURPOSES.map(p=><option key={p}>{p}</option>)}
+          </select>
+        </Field>
+      </Section>
+
+      {/* Search Button */}
+      <div style={{ display:"flex", justifyContent:"center", margin:"0 0 20px" }}>
+        <button onClick={searchDatabase} disabled={searching || !f.applicant_name.trim()}
+          style={{ ...btnBlue, padding:"11px 32px", fontSize:13, opacity:searching||!f.applicant_name.trim()?0.6:1 }}>
+          {searching ? "🔍 Searching..." : "🔍 Check Criminal Database"}
+        </button>
+      </div>
+
+      {/* Results */}
+      {hasSearched && (
+        <div style={{ marginBottom:20 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:C.text }}>Database Results</div>
+            <span style={{ fontSize:11, color:C.text3 }}>{matches.length} potential match{matches.length!==1?"es":""} found for "{f.applicant_name}"</span>
+          </div>
+
+          {matches.length === 0 ? (
+            <div style={{ background:"#F0FFF4", border:"2px solid #6EE7B7", borderRadius:6, padding:"20px 20px", display:"flex", alignItems:"center", gap:14 }}>
+              <div style={{ fontSize:32 }}>✅</div>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:"#166534" }}>No criminal record found</div>
+                <div style={{ fontSize:12, color:"#4ADE80" }}>No matches in the NCIC database for this applicant.</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ background:"#FFF7ED", border:"2px solid #FCD34D", borderRadius:6, padding:"14px 16px", marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#B45309", marginBottom:10 }}>⚠️ Potential matches found — confirm if any relate to this applicant:</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {matches.map(m=>(
+                  <div key={m.id} onClick={()=>setChosen(chosen?.id===m.id?null:m)}
+                    style={{ background:chosen?.id===m.id?"#FEE2E2":"#fff", border:`2px solid ${chosen?.id===m.id?"#DC2626":C.border}`, borderRadius:5, padding:"10px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+                    {m.photo_url && <img src={m.photo_url} alt="" style={{ width:44, height:44, borderRadius:3, objectFit:"cover", objectPosition:"top center", flexShrink:0 }}/>}
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
+                        <span style={{ fontSize:13, fontWeight:700, color:C.text }}>{m.name}</span>
+                        {m.alias&&<span style={{ fontSize:10, color:C.text3 }}>aka {m.alias}</span>}
+                        <span style={{ marginLeft:"auto", fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:99, background:RISK_BG[m.risk]||"#eee", color:RISK_COLOR[m.risk]||"#333" }}>{m.risk}</span>
+                      </div>
+                      <div style={{ fontSize:11, color:C.text3 }}>
+                        {m.id} · DOB: {m.dob||"—"} · {m.primary_offence}
+                        {m.convictions>0 && <span style={{ color:"#DC2626", fontWeight:600 }}> · {m.convictions} conviction{m.convictions!==1?"s":""}</span>}
+                        {m.gang_affiliation && <span style={{ color:"#7C0000" }}> · {m.gang_affiliation}</span>}
+                      </div>
+                    </div>
+                    {chosen?.id===m.id && <span style={{ fontSize:12, fontWeight:700, color:"#DC2626" }}>✓ Selected</span>}
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop:12, padding:"10px 12px", background:chosen==="none"?"#F0FFF4":"#F8F9FC", border:`2px solid ${chosen==="none"?"#6EE7B7":C.border}`, borderRadius:5, cursor:"pointer", display:"flex", alignItems:"center", gap:10 }}
+                onClick={()=>setChosen(chosen==="none"?null:"none")}>
+                <span style={{ fontSize:16 }}>{chosen==="none"?"✅":"⬜"}</span>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:chosen==="none"?"#166534":C.text }}>None of the above match this applicant</div>
+                  <div style={{ fontSize:11, color:C.text3 }}>Confirm the applicant has no criminal record in this system</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Result summary box */}
+          {(isClean || hasRecord) && (
+            <div style={{ background: isClean?"#F0FFF4":"#FEF2F2", border:`2px solid ${isClean?"#6EE7B7":"#FCA5A5"}`, borderRadius:6, padding:"14px 18px", marginBottom:16 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:isClean?"#166534":"#991B1B", marginBottom:4 }}>
+                {isClean ? "✅ RESULT: CLEAR — No criminal record found" : `⚠️ RESULT: RECORD FOUND — ${chosen.name} (${chosen.id})`}
+              </div>
+              <div style={{ fontSize:11, color:isClean?"#4ADE80":"#F87171" }}>
+                {isClean ? "This applicant has no matching criminal record in the NCIC database." : `Risk level: ${chosen.risk} · Offence: ${chosen.primary_offence} · Status: ${chosen.status}`}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Officer Notes & Submit */}
+      {hasSearched && (isClean || hasRecord || matches.length===0) && (
+        <>
+          <Section title="Officer Notes" icon="📝" color="#374151">
+            <Field label="Notes / Observations" full hint="Any relevant notes, additional checks performed, or reasons for decision">
+              <textarea value={f.officer_notes} onChange={e=>setF(p=>({...p,officer_notes:e.target.value}))} rows={3} placeholder="Optional notes..." style={{...inp,resize:"vertical"}}/>
+            </Field>
+          </Section>
+          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", paddingTop:8, borderTop:`1px solid ${C.border}` }}>
+            <button onClick={resetForm} style={btnSm}>Cancel</button>
+            <button onClick={issue} disabled={saving}
+              style={{ ...btnBlue, padding:"10px 28px", fontSize:13, background: isClean?"#16A34A":"#DC2626", borderColor: isClean?"#15803D":"#B91C1C" }}>
+              {saving ? "Saving..." : isClean ? "✓ Issue Clearance" : "⚠ Record — Save & Refer to Supervisor"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── MAIN OFFICER PORTAL ─────────────────────────────────────────────────────
 export default function OfficerPortal({ user, officer, onLogout }) {
   const [view, setView] = useState("dashboard"); // 'dashboard', 'new', 'my_reports', 'all_reports'
@@ -661,9 +952,10 @@ export default function OfficerPortal({ user, officer, onLogout }) {
       {/* Nav tabs */}
       <div style={{ display:"flex", background:C.surface, borderBottom:`1px solid ${C.border}`, padding:"0 24px" }}>
         {[
-          { id:"dashboard", label:"Dashboard" },
-          { id:"my_reports", label:"My Reports" },
-          { id:"all_reports", label:"All Station Reports" },
+          { id:"dashboard",    label:"Dashboard" },
+          { id:"my_reports",   label:"My Reports" },
+          { id:"all_reports",  label:"All Station Reports" },
+          { id:"clearance",    label:"Police Clearance" },
         ].map(t=>(
           <button key={t.id} onClick={()=>setView(t.id)}
             style={{ padding:"12px 16px", fontSize:13, fontWeight:view===t.id?600:400, color:view===t.id?C.accent:C.text3, borderBottom:view===t.id?`2px solid ${C.accent}`:"2px solid transparent", background:"none", border:"none", cursor:"pointer", marginBottom:"-1px" }}>
@@ -709,7 +1001,7 @@ export default function OfficerPortal({ user, officer, onLogout }) {
             </div>
 
             <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:12 }}>Submit a New Report</div>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
               {REPORT_TYPES.map(rt=>(
                 <div key={rt.id} onClick={()=>setView("new")}
                   style={{ background:C.surface, border:`2px solid ${C.border}`, borderRadius:6, padding:"16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}
@@ -723,6 +1015,18 @@ export default function OfficerPortal({ user, officer, onLogout }) {
                 </div>
               ))}
             </div>
+
+            <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:12 }}>Other Functions</div>
+            <div onClick={()=>setView("clearance")}
+              style={{ background:C.surface, border:`2px solid ${C.border}`, borderRadius:6, padding:"16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}
+              onMouseOver={e=>{ e.currentTarget.style.borderColor="#1447C4"; e.currentTarget.style.background="#E8EFFD"; }}
+              onMouseOut={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.background=C.surface; }}>
+              <div style={{ fontSize:24 }}>📋</div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:600, color:C.text }}>Police Clearance Check</div>
+                <div style={{ fontSize:11, color:C.text3, lineHeight:1.4 }}>Search the criminal database and issue a clearance for employment, visa, or other purposes</div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -734,6 +1038,9 @@ export default function OfficerPortal({ user, officer, onLogout }) {
 
         {/* All Station Reports */}
         {view==="all_reports" && <ReportsList officer={officer} viewAll={true}/>}
+
+        {/* Police Clearance */}
+        {view==="clearance" && <PoliceClearance officer={officer}/>}
       </div>
 
       {/* Footer */}
