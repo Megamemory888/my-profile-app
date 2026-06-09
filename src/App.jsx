@@ -258,43 +258,57 @@ function LoginPage({onLogin}) {
     onLogin();setLoading(false);
   };
   const features=[
-    {icon:"🗂️",title:"Criminal Profiles",desc:"Centralised database of persons of interest, suspects and known offenders across Fiji."},
-    {icon:"🌏",title:"Foreign Nationals",desc:"Track foreign nationals, immigration status, visa overstays and deportation records."},
-    {icon:"🔗",title:"Associate Networks",desc:"Map relationships between individuals, gang affiliations and organised crime networks."},
-    {icon:"📊",title:"Intelligence Reports",desc:"Risk assessments, behavioural analysis and operational intelligence in one place."},
+    {icon:"🗂️",title:"Criminal Profiles",desc:"Centralised database of suspects and known offenders across Fiji."},
+    {icon:"🌏",title:"Foreign Nationals",desc:"Track visa overstays, immigration status and deportation records."},
+    {icon:"🔗",title:"Associate Networks",desc:"Map gang affiliations and organised crime networks."},
+    {icon:"📊",title:"Intelligence Reports",desc:"Risk assessments and operational intelligence in one place."},
   ];
   return (
     <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",fontFamily:"'DM Sans',system-ui,sans-serif"}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
-      {/* Top classification banner */}
-      <div style={{background:"#B91C1C",color:"#fff",textAlign:"center",padding:"7px",fontSize:11,fontWeight:700,letterSpacing:"0.15em",flexShrink:0}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+        .login-wrap { display:flex; flex:1; }
+        .login-left { flex:0 0 55%; background:#0F2044; display:flex; flex-direction:column; justify-content:space-between; padding:52px 56px; position:relative; overflow:hidden; }
+        .login-right { flex:1; background:#F4F5F7; display:flex; align-items:center; justify-content:center; padding:40px 32px; }
+        .login-features { display:flex; flex-direction:column; gap:20px; }
+        @media(max-width:768px){
+          .login-wrap { flex-direction:column; }
+          .login-left { flex:none; padding:32px 24px 28px; }
+          .login-left-headline { font-size:22px !important; margin-bottom:10px !important; }
+          .login-left-sub { display:none; }
+          .login-features { display:none; }
+          .login-left-footer { display:none; }
+          .login-left-glow { display:none; }
+          .login-right { padding:28px 20px 40px; }
+        }
+      `}</style>
+      {/* Classification banner */}
+      <div style={{background:"#B91C1C",color:"#fff",textAlign:"center",padding:"7px 12px",fontSize:11,fontWeight:700,letterSpacing:"0.12em",flexShrink:0}}>
         RESTRICTED — AUTHORISED PERSONNEL ONLY — NCIC CLASSIFIED SYSTEM
       </div>
-      <div style={{flex:1,display:"flex"}}>
-        {/* LEFT PANEL — branding + info */}
-        <div style={{flex:"0 0 55%",background:"#0F2044",display:"flex",flexDirection:"column",justifyContent:"space-between",padding:"52px 56px",position:"relative",overflow:"hidden"}}>
-          {/* Grid pattern */}
+      <div className="login-wrap">
+        {/* LEFT PANEL */}
+        <div className="login-left">
           <div style={{position:"absolute",inset:0,backgroundImage:"repeating-linear-gradient(0deg,rgba(255,255,255,0.025) 0,rgba(255,255,255,0.025) 1px,transparent 1px,transparent 48px),repeating-linear-gradient(90deg,rgba(255,255,255,0.025) 0,rgba(255,255,255,0.025) 1px,transparent 1px,transparent 48px)",pointerEvents:"none"}}/>
-          {/* Glow */}
-          <div style={{position:"absolute",top:-120,left:-120,width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(26,86,219,0.18) 0%,transparent 70%)",pointerEvents:"none"}}/>
+          <div className="login-left-glow" style={{position:"absolute",top:-120,left:-120,width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(26,86,219,0.18) 0%,transparent 70%)",pointerEvents:"none"}}/>
           <div style={{position:"relative",zIndex:1}}>
             {/* Logo */}
-            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:52}}>
-              <div style={{width:56,height:56,borderRadius:14,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>🛡️</div>
+            <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:36}}>
+              <div style={{width:52,height:52,borderRadius:13,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>🛡️</div>
               <div>
-                <div style={{fontSize:18,fontWeight:700,color:"#fff",letterSpacing:"0.01em",lineHeight:1.2}}>NCIC Intelligence System</div>
-                <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginTop:3}}>National Criminal Intelligence Centre</div>
+                <div style={{fontSize:16,fontWeight:700,color:"#fff",lineHeight:1.2}}>NCIC Intelligence System</div>
+                <div style={{fontSize:10,color:"rgba(255,255,255,0.45)",letterSpacing:"0.08em",textTransform:"uppercase",marginTop:3}}>National Criminal Intelligence Centre</div>
               </div>
             </div>
             {/* Headline */}
-            <div style={{fontSize:32,fontWeight:700,color:"#fff",lineHeight:1.25,marginBottom:16,maxWidth:440}}>
+            <div className="login-left-headline" style={{fontSize:30,fontWeight:700,color:"#fff",lineHeight:1.25,marginBottom:14,maxWidth:440}}>
               Fiji's Central Criminal Intelligence Platform
             </div>
-            <div style={{fontSize:14,color:"rgba(255,255,255,0.55)",lineHeight:1.7,maxWidth:420,marginBottom:48}}>
-              A secure, role-based intelligence management system for authorised law enforcement personnel of the National Criminal Intelligence Centre.
+            <div className="login-left-sub" style={{fontSize:13,color:"rgba(255,255,255,0.5)",lineHeight:1.7,maxWidth:400,marginBottom:40}}>
+              A secure, role-based intelligence management system for authorised law enforcement personnel.
             </div>
             {/* Features */}
-            <div style={{display:"flex",flexDirection:"column",gap:20}}>
+            <div className="login-features">
               {features.map((f,i)=>(
                 <div key={i} style={{display:"flex",gap:14,alignItems:"flex-start"}}>
                   <div style={{width:36,height:36,borderRadius:9,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{f.icon}</div>
@@ -306,38 +320,47 @@ function LoginPage({onLogin}) {
               ))}
             </div>
           </div>
-          {/* Footer */}
-          <div style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>© 2025 NCIC · Fiji Police Force</div>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)",letterSpacing:"0.05em"}}>SYSTEM VERSION 2.4</div>
+          <div className="login-left-footer" style={{position:"relative",zIndex:1,borderTop:"1px solid rgba(255,255,255,0.08)",paddingTop:20,display:"flex",justifyContent:"space-between"}}>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>© 2026 NCIC · Fiji Police Force</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.25)"}}>VERSION 2.4</div>
           </div>
         </div>
 
         {/* RIGHT PANEL — login form */}
-        <div style={{flex:1,background:"#F4F5F7",display:"flex",alignItems:"center",justifyContent:"center",padding:"40px 32px"}}>
+        <div className="login-right">
           <div style={{width:"100%",maxWidth:380}}>
-            <div style={{marginBottom:36}}>
-              <div style={{fontSize:22,fontWeight:700,color:"#1A1D23",marginBottom:8}}>Secure Sign In</div>
+            {/* Mobile-only logo */}
+            <div style={{display:"none"}} className="mobile-logo">
+              <div style={{textAlign:"center",marginBottom:28}}>
+                <div style={{width:56,height:56,borderRadius:14,background:"#0F2044",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 12px"}}>🛡️</div>
+                <div style={{fontSize:18,fontWeight:700,color:"#1A1D23"}}>NCIC Intelligence System</div>
+                <div style={{fontSize:11,color:"#7B8794",marginTop:4,letterSpacing:"0.06em",textTransform:"uppercase"}}>National Criminal Intelligence Centre</div>
+              </div>
+            </div>
+            <style>{`.mobile-logo{display:none!important} @media(max-width:768px){.mobile-logo{display:block!important}}`}</style>
+            <div style={{marginBottom:28}}>
+              <div style={{fontSize:20,fontWeight:700,color:"#1A1D23",marginBottom:6}}>Secure Sign In</div>
               <div style={{fontSize:13,color:"#7B8794"}}>Enter your credentials to access the system.</div>
             </div>
             {error&&<div style={{background:"#FDEAEA",border:"1px solid #F0A0A0",color:"#7A1A1A",padding:"10px 14px",borderRadius:7,fontSize:12,marginBottom:20}}>{error}</div>}
-            <div style={{display:"flex",flexDirection:"column",gap:18}}>
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 <label style={{fontSize:11,fontWeight:700,color:"#4A5568",textTransform:"uppercase",letterSpacing:"0.07em"}}>Email Address</label>
-                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="you@ncic.gov.fj" style={{padding:"11px 13px",fontSize:13,borderRadius:7,border:"1px solid #DDE1E9",background:"#fff",color:"#1A1D23",fontFamily:"inherit",width:"100%",boxSizing:"border-box",outline:"none"}}/>
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="you@ncic.gov.fj" style={{padding:"13px 14px",fontSize:15,borderRadius:8,border:"1px solid #DDE1E9",background:"#fff",color:"#1A1D23",fontFamily:"inherit",width:"100%",boxSizing:"border-box",outline:"none"}}/>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 <label style={{fontSize:11,fontWeight:700,color:"#4A5568",textTransform:"uppercase",letterSpacing:"0.07em"}}>Password</label>
-                <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="••••••••" style={{padding:"11px 13px",fontSize:13,borderRadius:7,border:"1px solid #DDE1E9",background:"#fff",color:"#1A1D23",fontFamily:"inherit",width:"100%",boxSizing:"border-box",outline:"none"}}/>
+                <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()} placeholder="••••••••" style={{padding:"13px 14px",fontSize:15,borderRadius:8,border:"1px solid #DDE1E9",background:"#fff",color:"#1A1D23",fontFamily:"inherit",width:"100%",boxSizing:"border-box",outline:"none"}}/>
               </div>
-              <button onClick={login} disabled={loading} style={{background:"#1C2B4A",color:"#fff",border:"none",borderRadius:7,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:"0.05em",marginTop:4,opacity:loading?0.7:1}}>
+              <button onClick={login} disabled={loading} style={{background:"#0F2044",color:"#fff",border:"none",borderRadius:8,padding:"14px",fontSize:14,fontWeight:700,cursor:"pointer",letterSpacing:"0.05em",marginTop:4,opacity:loading?0.7:1}}>
                 {loading?"AUTHENTICATING...":"SIGN IN"}
               </button>
             </div>
-            <div style={{marginTop:28,padding:"16px",background:"#FFF8E6",border:"1px solid #FDE68A",borderRadius:7}}>
+            <div style={{marginTop:24,padding:"14px 16px",background:"#FFF8E6",border:"1px solid #FDE68A",borderRadius:8}}>
               <div style={{fontSize:11,fontWeight:700,color:"#92400E",letterSpacing:"0.06em",marginBottom:4}}>⚠ AUTHORISED ACCESS ONLY</div>
-              <div style={{fontSize:11,color:"#92400E",lineHeight:1.5}}>This system contains classified law enforcement data. Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
+              <div style={{fontSize:11,color:"#92400E",lineHeight:1.6}}>This system contains classified law enforcement data. Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
             </div>
+            <div style={{marginTop:16,textAlign:"center",fontSize:11,color:"#B0B7C3"}}>© 2026 NCIC · Fiji Police Force</div>
           </div>
         </div>
       </div>
