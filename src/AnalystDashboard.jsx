@@ -1,5 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "./supabaseClient";
+
+// ── Colour constants ──────────────────────────────────────────────────────────
+const BG     = "#0F172A";
+const CARD   = "#1E293B";
+const BORDER = "rgba(148,163,184,0.1)";
+const TEXT   = "#F1F5F9";
+const MUTED  = "#94A3B8";
 
 const CRIME_COLORS = {
   "Drug Trafficking":"#8B5CF6","International Drug Smuggling":"#7C3AED",
@@ -19,353 +26,240 @@ const CRIME_CATEGORIES = [
   { label:"Financial",      color:"#3B82F6", offences:["Money Laundering","Fraud / Scam","Identity Fraud","Tax Evasion","Bribery","Counterfeit Operations"] },
   { label:"Violence",       color:"#EF4444", offences:["Assault","Aggravated Assault","Domestic Violence","Murder / Manslaughter","Sexual Offence"] },
   { label:"Property",       color:"#F59E0B", offences:["Theft","Burglary","Vehicle Theft","Robbery","Armed Robbery"] },
-  { label:"Organised Crime",color:"#991B1B", offences:["Organized Crime Activity","Smuggling","Extortion"] },
+  { label:"Organised Crime",color:"#DC2626", offences:["Organized Crime Activity","Smuggling","Extortion"] },
   { label:"Cyber",          color:"#14B8A6", offences:["Cybercrime"] },
   { label:"Firearms",       color:"#6366F1", offences:["Illegal Firearm Possession"] },
   { label:"Other",          color:"#6B7280", offences:[] },
 ];
 
-const RISK_SIZE  = { Low:5, Moderate:8, High:12, Severe:18 };
-const RISK_GLOW  = { Low:"#22C55E", Moderate:"#EAB308", High:"#F97316", Severe:"#EF4444" };
-const RISK_ORDER = { Severe:0, High:1, Moderate:2, Low:3 };
+const RISK_COLORS  = { Severe:"#EF4444", High:"#F97316", Moderate:"#EAB308", Low:"#22C55E" };
+const RISK_ORDER   = ["Severe","High","Moderate","Low"];
+const RISK_SORT    = { Severe:0, High:1, Moderate:2, Low:3 };
+
+const STATUS_COLORS = {
+  "Wanted":"#EF4444","In Custody":"#F97316","Released":"#22C55E",
+  "Under Investigation":"#60A5FA","Deported":"#8B5CF6","Deceased":"#6B7280",
+};
 
 function getCat(offence) {
-  return CRIME_CATEGORIES.find(c => c.offences.includes(offence)) || CRIME_CATEGORIES[CRIME_CATEGORIES.length - 1];
+  return CRIME_CATEGORIES.find(c => c.offences.includes(offence))
+      || CRIME_CATEGORIES[CRIME_CATEGORIES.length - 1];
 }
 
-export default function AnalystDashboard({ onLogout }) {
-  const canvasRef   = useRef(null);
-  const animRef     = useRef(null);
-  const nodesRef    = useRef([]);
-  const mouseRef    = useRef({ x:-999, y:-999 });
-  const hoveredRef  = useRef(null);
-  const camRef      = useRef({ ox:0, oy:0, vx:0.08, vy:0.055 });
-  const initRef     = useRef(false);
+// ── Badge pill ────────────────────────────────────────────────────────────────
+function Badge({ label, color }) {
+  return (
+    <span style={{
+      display:"inline-block", padding:"2px 8px", borderRadius:99,
+      fontSize:10, fontWeight:600, whiteSpace:"nowrap",
+      color, background:color+"22", border:`1px solid ${color}44`,
+    }}>{label}</span>
+  );
+}
 
+// ── SVG Donut chart ───────────────────────────────────────────────────────────
+function DonutChart({ segments, total, size = 148 }) {
+  const r    = 50;
+  const cx   = size / 2;
+  const cy   = size / 2;
+  const circ = 2 * Math.PI * r;
+  let cum    = 0;
+  const valid = segments.filter(s => s.value > 0);
+
+  return (
+    <svg width={size} height={size} style={{ overflow:"visible" }}>
+      <circle cx={cx} cy={cy} r={r} fill="none"
+        stroke="rgba(255,255,255,0.05)" strokeWidth={18}/>
+      {valid.map((seg, i) => {
+        const pct  = seg.value / total;
+        const dash = pct * circ;
+        const rot  = (cum / total) * 360 - 90;
+        cum += seg.value;
+        return (
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+            stroke={seg.color} strokeWidth={18}
+            strokeDasharray={`${dash} ${circ - dash}`}
+            strokeLinecap="butt"
+            style={{ transform:`rotate(${rot}deg)`,
+                     transformOrigin:`${cx}px ${cy}px`,
+                     transition:"stroke-dasharray 0.6s ease" }}
+          />
+        );
+      })}
+      <text x={cx} y={cy - 7} textAnchor="middle"
+        fill={TEXT} fontSize="22" fontWeight="700" fontFamily="monospace">{total}</text>
+      <text x={cx} y={cy + 11} textAnchor="middle"
+        fill={MUTED} fontSize="9" letterSpacing="0.12em"
+        fontFamily="Inter,sans-serif">PROFILES</text>
+    </svg>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function AnalystDashboard({ onLogout }) {
   const [profiles,      setProfiles]      = useState([]);
   const [loading,       setLoading]       = useState(true);
-  const [hovered,       setHovered]       = useState(null);
-  const [activeFilters, setActiveFilters] = useState(new Set());
-  const [stats,         setStats]         = useState({});
   const [time,          setTime]          = useState("");
+  const [search,        setSearch]        = useState("");
+  const [catFilters,    setCatFilters]    = useState(new Set());
+  const [riskFilter,    setRiskFilter]    = useState(null);
+  const [selected,      setSelected]      = useState(null);
+  const [sortCol,       setSortCol]       = useState("risk");
+  const [sortDir,       setSortDir]       = useState("asc");
 
-  // ── Clock
+  // Clock
   useEffect(() => {
-    const tick = () => setTime(new Date().toLocaleTimeString("en-FJ", { hour12:false }));
+    const tick = () => setTime(new Date().toLocaleTimeString("en-FJ",{hour12:false}));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
 
-  // ── Load data
+  // Fetch data
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from("criminal_profiles")
+      const { data } = await supabase
+        .from("criminal_profiles")
         .select("id,name,alias,risk,status,primary_offence,secondary_offence,nationality_type,deportation_status,gang_affiliation,convictions,location,photo_url,dob,gender,arrest_year")
         .order("risk");
-      if (data) {
-        setProfiles(data);
-        setStats({
-          total:     data.length,
-          wanted:    data.filter(p => p.status === "Wanted").length,
-          inCustody: data.filter(p => p.status === "In Custody").length,
-          severe:    data.filter(p => p.risk === "Severe").length,
-          high:      data.filter(p => p.risk === "High").length,
-          foreign:   data.filter(p => p.nationality_type === "Foreign National").length,
-          gangs:     data.filter(p => p.gang_affiliation && p.gang_affiliation !== "No Gang Affiliation").length,
-        });
-      }
+      if (data) setProfiles(data);
       setLoading(false);
     };
     load();
   }, []);
 
-  // ── Build / rebuild nodes
-  const buildNodes = useCallback((data, canvas) => {
-    const W = canvas.offsetWidth || canvas.width;
-    const H = canvas.offsetHeight || canvas.height;
-    const prev = Object.fromEntries(nodesRef.current.map(n => [n.id, n]));
-    nodesRef.current = data.map((p, i) => {
-      const e = prev[p.id];
-      return {
-        id:      p.id,
-        profile: p,
-        x:  e?.x  ?? (W * 0.1 + Math.random() * W * 0.8),
-        y:  e?.y  ?? (H * 0.1 + Math.random() * H * 0.8),
-        vx: e?.vx ?? (Math.random() - 0.5) * 0.6,
-        vy: e?.vy ?? (Math.random() - 0.5) * 0.6,
-        size:  RISK_SIZE[p.risk]  || 6,
-        color: CRIME_COLORS[p.primary_offence] || "#6B7280",
-        glow:  RISK_GLOW[p.risk]  || "#6B7280",
-        catIdx: CRIME_CATEGORIES.findIndex(c => c.offences.includes(p.primary_offence)),
-      };
-    });
-  }, []);
+  // Summary stats
+  const stats = useMemo(() => ({
+    total:     profiles.length,
+    wanted:    profiles.filter(p => p.status === "Wanted").length,
+    inCustody: profiles.filter(p => p.status === "In Custody").length,
+    severe:    profiles.filter(p => p.risk === "Severe").length,
+    high:      profiles.filter(p => p.risk === "High").length,
+    foreign:   profiles.filter(p => p.nationality_type === "Foreign National").length,
+    gangs:     profiles.filter(p => p.gang_affiliation && p.gang_affiliation !== "No Gang Affiliation").length,
+  }), [profiles]);
 
-  useEffect(() => {
-    if (!profiles.length || !canvasRef.current || initRef.current) return;
-    initRef.current = true;
-    buildNodes(profiles, canvasRef.current);
-  }, [profiles, buildNodes]);
-
-  useEffect(() => {
-    if (!canvasRef.current || loading) return;
-    const filtered = activeFilters.size === 0
-      ? profiles
-      : profiles.filter(p => activeFilters.has(getCat(p.primary_offence).label));
-    buildNodes(filtered, canvasRef.current);
-  }, [activeFilters, profiles, buildNodes, loading]);
-
-  // ── Animation loop
-  useEffect(() => {
-    if (loading || !canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx    = canvas.getContext("2d");
-
-    const resize = () => {
-      canvas.width  = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const cols = 4;
-    const getClusterTarget = (catIdx, W, H, cam) => {
-      const idx = catIdx < 0 ? CRIME_CATEGORIES.length - 1 : catIdx;
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-      return {
-        x: W * 0.15 + col * (W * 0.22) + cam.ox * 0.25,
-        y: H * 0.2  + row * (H * 0.38) + cam.oy * 0.2,
-      };
-    };
-
-    let frameCount = 0;
-
-    const animate = () => {
-      frameCount++;
-      const W = canvas.width;
-      const H = canvas.height;
-      const nodes = nodesRef.current;
-      const cam   = camRef.current;
-
-      // Camera drift
-      cam.ox += cam.vx;
-      cam.oy += cam.vy;
-      if (Math.abs(cam.ox) > 50) cam.vx *= -1;
-      if (Math.abs(cam.oy) > 35) cam.vy *= -1;
-
-      // Background
-      ctx.fillStyle = "rgba(6,8,21,0.18)";
-      ctx.fillRect(0, 0, W, H);
-
-      // ── Physics
-      for (let i = 0; i < nodes.length; i++) {
-        const n = nodes[i];
-
-        // Cluster attraction
-        const cl = getClusterTarget(n.catIdx, W, H, cam);
-        n.vx += (cl.x - n.x) * 0.00018;
-        n.vy += (cl.y - n.y) * 0.00018;
-
-        // Centre gravity (weak)
-        n.vx += (W / 2 - n.x) * 0.00005;
-        n.vy += (H / 2 - n.y) * 0.00005;
-
-        // Repulsion (only nearby, for perf)
-        for (let j = i + 1; j < nodes.length; j++) {
-          const m   = nodes[j];
-          const dx  = n.x - m.x;
-          const dy  = n.y - m.y;
-          const d2  = dx * dx + dy * dy;
-          const min = (n.size + m.size) * 5;
-          if (d2 < min * min) {
-            const d = Math.sqrt(d2) || 1;
-            const f = (min - d) / d * 0.07;
-            n.vx += dx * f;  n.vy += dy * f;
-            m.vx -= dx * f;  m.vy -= dy * f;
-          }
-        }
-
-        n.vx *= 0.965;
-        n.vy *= 0.965;
-        n.x  += n.vx;
-        n.y  += n.vy;
-
-        const pad = n.size + 2;
-        if (n.x < pad)     { n.x = pad;     n.vx *= -0.4; }
-        if (n.x > W - pad) { n.x = W - pad; n.vx *= -0.4; }
-        if (n.y < pad)     { n.y = pad;     n.vy *= -0.4; }
-        if (n.y > H - pad) { n.y = H - pad; n.vy *= -0.4; }
-      }
-
-      // ── Draw edges (same category, within range)
-      ctx.globalAlpha = 0.07;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const n = nodes[i], m = nodes[j];
-          if (n.catIdx !== m.catIdx) continue;
-          const dx = n.x - m.x, dy = n.y - m.y;
-          if (dx * dx + dy * dy > 160 * 160) continue;
-          ctx.beginPath();
-          ctx.strokeStyle = n.color;
-          ctx.lineWidth   = 0.6;
-          ctx.moveTo(n.x, n.y);
-          ctx.lineTo(m.x, m.y);
-          ctx.stroke();
-        }
-      }
-      ctx.globalAlpha = 1;
-
-      // ── Hover detection
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-      let newHov = null;
-
-      // Draw nodes (back-to-front by size so small nodes stay visible)
-      const sorted = [...nodes].sort((a,b) => b.size - a.size);
-      for (const n of sorted) {
-        const dx   = mx - n.x, dy = my - n.y;
-        const hit  = Math.sqrt(dx*dx + dy*dy) < n.size + 10;
-        if (hit) newHov = n.profile;
-
-        const isHov = hit;
-        const gs    = isHov ? n.size * 5 : n.size * 2.8;
-
-        // Glow halo
-        const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, gs);
-        grad.addColorStop(0, n.glow + (isHov ? "BB" : "55"));
-        grad.addColorStop(1, "transparent");
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, gs, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Core
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, isHov ? n.size * 1.35 : n.size, 0, Math.PI * 2);
-        ctx.fillStyle = n.color;
-        ctx.fill();
-        ctx.strokeStyle = isHov ? "#fff" : "rgba(255,255,255,0.25)";
-        ctx.lineWidth   = isHov ? 2 : 0.6;
-        ctx.stroke();
-
-        // Pulse ring for Severe / Wanted
-        if (n.profile.risk === "Severe" || n.profile.status === "Wanted") {
-          const t = (frameCount % 120) / 120;
-          ctx.beginPath();
-          ctx.arc(n.x, n.y, n.size + t * 14, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(239,68,68,${0.7 - t * 0.7})`;
-          ctx.lineWidth   = 1.5;
-          ctx.stroke();
-        }
-
-        // Label on hover
-        if (isHov) {
-          ctx.font      = "bold 11px Inter, sans-serif";
-          ctx.fillStyle = "#fff";
-          ctx.textAlign = "center";
-          const label   = n.profile.name.length > 16 ? n.profile.name.slice(0,15)+"…" : n.profile.name;
-          const tw      = ctx.measureText(label).width + 12;
-          const tx      = n.x, ty = n.y - n.size - 10;
-          ctx.fillStyle = "rgba(6,8,21,0.85)";
-          ctx.beginPath();
-          ctx.roundRect(tx - tw/2, ty - 14, tw, 18, 3);
-          ctx.fill();
-          ctx.fillStyle = "#fff";
-          ctx.fillText(label, tx, ty);
-        }
-      }
-
-      if (newHov !== hoveredRef.current) {
-        hoveredRef.current = newHov;
-        setHovered(newHov || null);
-      }
-
-      animRef.current = requestAnimationFrame(animate);
-    };
-
-    animRef.current = requestAnimationFrame(animate);
-    return () => {
-      cancelAnimationFrame(animRef.current);
-      window.removeEventListener("resize", resize);
-    };
-  }, [loading]);
-
-  // ── Mouse
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const onMove = e => {
-      const r = canvas.getBoundingClientRect();
-      mouseRef.current = { x: e.clientX - r.left, y: e.clientY - r.top };
-    };
-    const onLeave = () => { mouseRef.current = { x:-999, y:-999 }; };
-    canvas.addEventListener("mousemove", onMove);
-    canvas.addEventListener("mouseleave", onLeave);
-    return () => { canvas.removeEventListener("mousemove", onMove); canvas.removeEventListener("mouseleave", onLeave); };
-  }, [loading]);
-
-  const toggleFilter = label => setActiveFilters(prev => {
-    const next = new Set(prev);
-    next.has(label) ? next.delete(label) : next.add(label);
-    return next;
-  });
-
-  const crimeBreakdown = CRIME_CATEGORIES.map(cat => ({
-    ...cat,
-    count: profiles.filter(p => cat.offences.length
-      ? cat.offences.includes(p.primary_offence)
-      : !CRIME_CATEGORIES.slice(0,-1).some(c => c.offences.includes(p.primary_offence))).length
-  })).filter(c => c.count > 0).sort((a,b) => b.count - a.count);
+  // Crime category breakdown
+  const crimeBreakdown = useMemo(() =>
+    CRIME_CATEGORIES.map(cat => ({
+      ...cat,
+      count: profiles.filter(p =>
+        cat.offences.length
+          ? cat.offences.includes(p.primary_offence)
+          : !CRIME_CATEGORIES.slice(0,-1).some(c => c.offences.includes(p.primary_offence))
+      ).length,
+    })).filter(c => c.count > 0).sort((a, b) => b.count - a.count),
+  [profiles]);
 
   const maxCount = Math.max(...crimeBreakdown.map(c => c.count), 1);
 
-  const INSPECTOR_W = 310;
-  const LEFT_W      = 230;
+  // Risk breakdown for donut
+  const riskBreakdown = useMemo(() =>
+    RISK_ORDER.map(r => ({ label:r, value:profiles.filter(p=>p.risk===r).length, color:RISK_COLORS[r] }))
+              .filter(r => r.value > 0),
+  [profiles]);
 
+  // Filtered + sorted table rows
+  const tableRows = useMemo(() => {
+    let result = profiles;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(p =>
+        p.name?.toLowerCase().includes(q) ||
+        p.alias?.toLowerCase().includes(q) ||
+        p.id?.toLowerCase().includes(q) ||
+        p.location?.toLowerCase().includes(q) ||
+        p.primary_offence?.toLowerCase().includes(q)
+      );
+    }
+    if (catFilters.size > 0)
+      result = result.filter(p => catFilters.has(getCat(p.primary_offence).label));
+    if (riskFilter)
+      result = result.filter(p => p.risk === riskFilter);
+
+    return [...result].sort((a, b) => {
+      let av, bv;
+      if      (sortCol === "risk")        { av = RISK_SORT[a.risk] ?? 9;  bv = RISK_SORT[b.risk] ?? 9; }
+      else if (sortCol === "convictions") { av = a.convictions || 0;      bv = b.convictions || 0; }
+      else if (sortCol === "name")        { av = a.name || "";             bv = b.name || ""; }
+      else                                { av = a[sortCol] || "";         bv = b[sortCol] || ""; }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ?  1 : -1;
+      return 0;
+    });
+  }, [profiles, search, catFilters, riskFilter, sortCol, sortDir]);
+
+  const toggleCat = label => setCatFilters(prev => {
+    const n = new Set(prev); n.has(label) ? n.delete(label) : n.add(label); return n;
+  });
+
+  const handleSort = col => {
+    if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortCol(col); setSortDir("asc"); }
+  };
+
+  const SortIcon = ({ col }) =>
+    sortCol === col
+      ? <span style={{ color:"#818CF8", marginLeft:3 }}>{sortDir==="asc"?"↑":"↓"}</span>
+      : <span style={{ color:"rgba(255,255,255,0.2)", marginLeft:3 }}>↕</span>;
+
+  const hasFilters = search || riskFilter || catFilters.size > 0;
+  const clearAll   = () => { setSearch(""); setRiskFilter(null); setCatFilters(new Set()); };
+
+  // ── Loading screen ─────────────────────────────────────────────────────────
   if (loading) return (
-    <div style={{ background:"#060815", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16 }}>
-      <div style={{ width:56, height:56, borderRadius:"50%", border:"2px solid rgba(99,102,241,0.4)", borderTopColor:"#6366F1", animation:"spin 1s linear infinite" }}/>
+    <div style={{ background:BG, minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ color:"#6366F1", fontSize:11, letterSpacing:"0.18em", textTransform:"uppercase", fontFamily:"monospace" }}>Loading intelligence data…</div>
+      <div style={{ width:44,height:44, borderRadius:"50%", border:"2px solid rgba(99,102,241,0.25)", borderTopColor:"#6366F1", animation:"spin 1s linear infinite" }}/>
+      <div style={{ color:MUTED, fontSize:12, letterSpacing:"0.1em" }}>Loading intelligence data…</div>
     </div>
   );
 
+  const INSP = 324;
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ background:"#060815", minHeight:"100vh", fontFamily:"'Inter',system-ui,sans-serif", color:"#fff", overflow:"hidden" }}>
+    <div style={{ background:BG, minHeight:"100vh", fontFamily:"'Inter',system-ui,sans-serif", color:TEXT }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        ::-webkit-scrollbar{width:4px}
-        ::-webkit-scrollbar-track{background:rgba(255,255,255,0.03)}
-        ::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.4);border-radius:2px}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-        @keyframes fadeSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+        ::-webkit-scrollbar{width:5px;height:5px}
+        ::-webkit-scrollbar-track{background:rgba(255,255,255,0.02)}
+        ::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.35);border-radius:3px}
+        input::placeholder{color:#475569}
+        input:focus{border-color:rgba(99,102,241,0.5)!important;outline:none}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+        @keyframes slideIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}
+        .prof-row:hover td{background:rgba(99,102,241,0.07)!important;cursor:pointer}
+        th{user-select:none;cursor:pointer}
+        th:hover{color:#a5b4fc!important}
       `}</style>
 
       {/* ── TOP BAR */}
-      <div style={{ position:"fixed", top:0, left:0, right:0, height:50, background:"rgba(6,8,21,0.96)", borderBottom:"1px solid rgba(99,102,241,0.18)", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", padding:"0 20px", gap:14, zIndex:200 }}>
-        <div style={{ width:30, height:30, borderRadius:5, background:"rgba(99,102,241,0.15)", border:"1px solid rgba(99,102,241,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15 }}>🛡️</div>
+      <div style={{ position:"fixed",top:0,left:0,right:0,height:52,zIndex:400, background:"rgba(15,23,42,0.97)",borderBottom:`1px solid ${BORDER}`,backdropFilter:"blur(14px)", display:"flex",alignItems:"center",padding:"0 20px",gap:12 }}>
+        <div style={{ width:34,height:34,borderRadius:7, background:"rgba(99,102,241,0.15)",border:"1px solid rgba(99,102,241,0.3)", display:"flex",alignItems:"center",justifyContent:"center",fontSize:17 }}>🛡️</div>
         <div>
-          <div style={{ fontSize:12, fontWeight:700, letterSpacing:"0.06em" }}>NCIC</div>
-          <div style={{ fontSize:8, color:"rgba(255,255,255,0.35)", letterSpacing:"0.14em", textTransform:"uppercase" }}>Intelligence Visual Centre · Fiji</div>
+          <div style={{ fontSize:13,fontWeight:700,letterSpacing:"0.05em" }}>NCIC</div>
+          <div style={{ fontSize:9,color:MUTED,letterSpacing:"0.1em",textTransform:"uppercase" }}>Intelligence Centre · Fiji</div>
         </div>
-        <div style={{ width:1, height:24, background:"rgba(255,255,255,0.08)", marginLeft:4 }}/>
-        <div style={{ fontSize:10, color:"rgba(255,255,255,0.35)", letterSpacing:"0.08em", textTransform:"uppercase" }}>Crime Network Analysis</div>
+        <div style={{ width:1,height:28,background:BORDER,marginLeft:4 }}/>
+        <div style={{ fontSize:11,color:MUTED }}>Crime Intelligence Dashboard</div>
         <div style={{ flex:1 }}/>
-        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-          <div style={{ width:6, height:6, borderRadius:"50%", background:"#22C55E", animation:"pulse 2s infinite" }}/>
-          <span style={{ fontSize:9, color:"#22C55E", letterSpacing:"0.1em", textTransform:"uppercase", fontFamily:"monospace" }}>Live</span>
+        <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+          <div style={{ width:7,height:7,borderRadius:"50%",background:"#22C55E",animation:"pulse 2s infinite" }}/>
+          <span style={{ fontSize:10,color:"#22C55E",letterSpacing:"0.08em",fontWeight:600 }}>LIVE</span>
         </div>
-        <div style={{ fontFamily:"monospace", fontSize:11, color:"rgba(255,255,255,0.4)", minWidth:60, textAlign:"right" }}>{time}</div>
-        <div style={{ width:1, height:24, background:"rgba(255,255,255,0.08)" }}/>
-        <span style={{ fontSize:10, color:"rgba(255,255,255,0.3)", fontFamily:"monospace" }}>{profiles.length} records</span>
-        <button onClick={onLogout} style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.4)", fontSize:10, padding:"4px 10px", borderRadius:4, cursor:"pointer", letterSpacing:"0.04em" }}>Sign out</button>
+        <div style={{ fontFamily:"monospace",fontSize:11,color:MUTED,minWidth:64,textAlign:"right" }}>{time}</div>
+        <div style={{ width:1,height:28,background:BORDER }}/>
+        <span style={{ fontSize:10,color:MUTED,fontFamily:"monospace" }}>{profiles.length} records</span>
+        <button onClick={onLogout}
+          style={{ background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,color:MUTED,fontSize:10,padding:"5px 12px",borderRadius:5,cursor:"pointer" }}>
+          Sign out
+        </button>
       </div>
 
-      {/* ── KPI BAR */}
-      <div style={{ position:"fixed", top:50, left:LEFT_W, right:0, height:56, background:"rgba(6,8,21,0.92)", borderBottom:"1px solid rgba(255,255,255,0.05)", display:"flex", alignItems:"center", zIndex:150, backdropFilter:"blur(8px)" }}>
+      {/* ── KPI STRIP */}
+      <div style={{ position:"fixed",top:52,left:0,right:0,height:64,zIndex:300, background:"rgba(15,23,42,0.95)",borderBottom:`1px solid ${BORDER}`, display:"flex",alignItems:"stretch" }}>
         {[
           { l:"Total Profiles",    v:stats.total,     c:"#60A5FA" },
           { l:"Wanted",            v:stats.wanted,    c:"#EF4444" },
@@ -375,120 +269,255 @@ export default function AnalystDashboard({ onLogout }) {
           { l:"Foreign Nationals", v:stats.foreign,   c:"#8B5CF6" },
           { l:"Gang-Affiliated",   v:stats.gangs,     c:"#EC4899" },
         ].map((s,i) => (
-          <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", borderRight:"1px solid rgba(255,255,255,0.04)", height:"100%", padding:"0 6px" }}>
-            <div style={{ fontSize:22, fontWeight:700, color:s.c, fontFamily:"monospace", lineHeight:1, textShadow:`0 0 12px ${s.c}88` }}>{s.v}</div>
-            <div style={{ fontSize:8, color:"rgba(255,255,255,0.3)", letterSpacing:"0.06em", textTransform:"uppercase", marginTop:3, textAlign:"center" }}>{s.l}</div>
+          <div key={i} style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center", borderRight:`1px solid ${BORDER}`,padding:"0 6px" }}>
+            <div style={{ fontSize:26,fontWeight:700,color:s.c,fontFamily:"monospace",lineHeight:1 }}>{s.v}</div>
+            <div style={{ fontSize:9,color:MUTED,letterSpacing:"0.06em",textTransform:"uppercase",marginTop:4,textAlign:"center" }}>{s.l}</div>
           </div>
         ))}
       </div>
 
-      {/* ── LEFT PANEL */}
-      <div style={{ position:"fixed", top:50, left:0, bottom:0, width:LEFT_W, background:"rgba(6,8,21,0.97)", borderRight:"1px solid rgba(255,255,255,0.06)", padding:"14px 12px", overflowY:"auto", zIndex:150 }}>
-        <div style={{ fontSize:8, fontWeight:700, color:"rgba(255,255,255,0.25)", letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:10 }}>Filter by Category</div>
+      {/* ── BODY (flex row) */}
+      <div style={{ paddingTop:116,display:"flex",minHeight:"100vh" }}>
 
-        {CRIME_CATEGORIES.map(cat => {
-          const count = profiles.filter(p => cat.offences.length
-            ? cat.offences.includes(p.primary_offence)
-            : !CRIME_CATEGORIES.slice(0,-1).some(c=>c.offences.includes(p.primary_offence))).length;
-          if (!count) return null;
-          const on = activeFilters.has(cat.label);
-          return (
-            <div key={cat.label} onClick={() => toggleFilter(cat.label)}
-              style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 8px", borderRadius:5, cursor:"pointer", marginBottom:2, background:on?`${cat.color}18`:"transparent", border:`1px solid ${on?cat.color+"44":"transparent"}`, transition:"all 0.15s", opacity: activeFilters.size>0&&!on ? 0.3 : 1 }}>
-              <div style={{ width:7, height:7, borderRadius:"50%", background:cat.color, boxShadow:`0 0 5px ${cat.color}`, flexShrink:0 }}/>
-              <span style={{ fontSize:11, color:"rgba(255,255,255,0.7)", flex:1 }}>{cat.label}</span>
-              <span style={{ fontSize:10, color:cat.color, fontFamily:"monospace", fontWeight:600 }}>{count}</span>
-            </div>
-          );
-        })}
+        {/* LEFT SIDEBAR */}
+        <div style={{ width:220,flexShrink:0,position:"sticky",top:116,alignSelf:"flex-start", height:"calc(100vh - 116px)",overflowY:"auto", borderRight:`1px solid ${BORDER}`,padding:"16px 12px",background:"rgba(15,23,42,0.85)" }}>
 
-        {activeFilters.size > 0 && (
-          <button onClick={() => setActiveFilters(new Set())} style={{ marginTop:8, width:"100%", padding:"6px", background:"rgba(99,102,241,0.1)", border:"1px solid rgba(99,102,241,0.25)", borderRadius:4, color:"#818CF8", fontSize:10, cursor:"pointer", letterSpacing:"0.04em" }}>
-            Clear filters
-          </button>
-        )}
+          <div style={{ fontSize:9,fontWeight:600,color:MUTED,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10 }}>Category Filter</div>
+          {CRIME_CATEGORIES.map(cat => {
+            const cnt = profiles.filter(p => cat.offences.length
+              ? cat.offences.includes(p.primary_offence)
+              : !CRIME_CATEGORIES.slice(0,-1).some(c => c.offences.includes(p.primary_offence))).length;
+            if (!cnt) return null;
+            const on = catFilters.has(cat.label);
+            return (
+              <div key={cat.label} onClick={() => toggleCat(cat.label)}
+                style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:6,cursor:"pointer",marginBottom:2, background:on?`${cat.color}18`:"transparent",border:`1px solid ${on?cat.color+"44":"transparent"}`, transition:"all 0.15s",opacity:catFilters.size>0&&!on?0.35:1 }}>
+                <div style={{ width:8,height:8,borderRadius:2,background:cat.color,flexShrink:0 }}/>
+                <span style={{ fontSize:11,color:on?TEXT:MUTED,flex:1 }}>{cat.label}</span>
+                <span style={{ fontSize:10,color:cat.color,fontFamily:"monospace",fontWeight:600 }}>{cnt}</span>
+              </div>
+            );
+          })}
+          {catFilters.size > 0 && (
+            <button onClick={() => setCatFilters(new Set())}
+              style={{ marginTop:8,width:"100%",padding:"5px",background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.25)",borderRadius:4,color:"#818CF8",fontSize:10,cursor:"pointer" }}>
+              Clear category filter
+            </button>
+          )}
 
-        <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"14px 0" }}/>
+          <div style={{ height:1,background:BORDER,margin:"16px 0" }}/>
 
-        <div style={{ fontSize:8, fontWeight:700, color:"rgba(255,255,255,0.25)", letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:10 }}>Risk Scale</div>
-        {[["Severe","#EF4444",18],["High","#F97316",12],["Moderate","#EAB308",8],["Low","#22C55E",5]].map(([r,c,s])=>(
-          <div key={r} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 8px", marginBottom:3 }}>
-            <div style={{ width:s+2, height:s+2, borderRadius:"50%", background:c, boxShadow:`0 0 ${s}px ${c}`, flexShrink:0 }}/>
-            <span style={{ fontSize:10, color:"rgba(255,255,255,0.55)", flex:1 }}>{r}</span>
-            <span style={{ fontSize:10, color:c, fontFamily:"monospace" }}>{profiles.filter(p=>p.risk===r).length}</span>
-          </div>
-        ))}
-
-        <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"14px 0" }}/>
-
-        <div style={{ fontSize:8, fontWeight:700, color:"rgba(255,255,255,0.25)", letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:10 }}>Breakdown</div>
-        {crimeBreakdown.map(cat=>(
-          <div key={cat.label} style={{ marginBottom:9 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-              <span style={{ fontSize:9, color:"rgba(255,255,255,0.45)" }}>{cat.label}</span>
-              <span style={{ fontSize:9, color:cat.color, fontFamily:"monospace" }}>{cat.count}</span>
-            </div>
-            <div style={{ height:3, background:"rgba(255,255,255,0.05)", borderRadius:2 }}>
-              <div style={{ height:"100%", borderRadius:2, background:cat.color, width:`${(cat.count/maxCount)*100}%`, boxShadow:`0 0 5px ${cat.color}80`, transition:"width 1s ease" }}/>
-            </div>
-          </div>
-        ))}
-
-        <div style={{ height:1, background:"rgba(255,255,255,0.06)", margin:"14px 0" }}/>
-        <div style={{ fontSize:8, color:"rgba(255,255,255,0.2)", textAlign:"center", letterSpacing:"0.06em", lineHeight:1.6 }}>
-          READ-ONLY · ANALYST VIEW<br/>NCIC · CONFIDENTIAL
-        </div>
-      </div>
-
-      {/* ── CANVAS */}
-      <canvas ref={canvasRef}
-        style={{ position:"fixed", top:106, left:LEFT_W, width:`calc(100vw - ${LEFT_W}px${hovered?` - ${INSPECTOR_W}px`:""})`, height:`calc(100vh - 106px)`, display:"block", cursor: hovered?"crosshair":"default" }}
-      />
-
-      {/* ── RIGHT INSPECTOR */}
-      {hovered && (
-        <div style={{ position:"fixed", top:106, right:0, bottom:0, width:INSPECTOR_W, background:"rgba(6,8,21,0.97)", borderLeft:"1px solid rgba(255,255,255,0.07)", padding:16, overflowY:"auto", zIndex:150, animation:"fadeSlide 0.18s ease" }}>
-          <div style={{ fontSize:8, color:"rgba(255,255,255,0.25)", letterSpacing:"0.14em", textTransform:"uppercase", marginBottom:12 }}>Profile Inspector</div>
-
-          {/* Card */}
-          <div style={{ background:`linear-gradient(135deg,${CRIME_COLORS[hovered.primary_offence]||"#6B7280"}1A,transparent)`, border:`1px solid ${CRIME_COLORS[hovered.primary_offence]||"#6B7280"}44`, borderRadius:8, padding:14, marginBottom:14 }}>
-            {hovered.photo_url && (
-              <img src={hovered.photo_url} alt="" style={{ width:54, height:54, borderRadius:4, objectFit:"cover", objectPosition:"top center", marginBottom:10, border:`2px solid ${CRIME_COLORS[hovered.primary_offence]||"#6B7280"}55` }}/>
-            )}
-            <div style={{ fontSize:14, fontWeight:700, marginBottom:2 }}>{hovered.name}</div>
-            {hovered.alias && <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)", marginBottom:7 }}>aka {hovered.alias}</div>}
-            <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
-              <span style={{ fontSize:9, padding:"2px 8px", borderRadius:99, background:RISK_GLOW[hovered.risk]+"22", color:RISK_GLOW[hovered.risk], border:`1px solid ${RISK_GLOW[hovered.risk]}33`, fontWeight:700 }}>{hovered.risk}</span>
-              <span style={{ fontSize:9, padding:"2px 8px", borderRadius:99, background:"rgba(255,255,255,0.07)", color:"rgba(255,255,255,0.55)", border:"1px solid rgba(255,255,255,0.1)" }}>{hovered.status}</span>
-              {hovered.nationality_type==="Foreign National" && <span style={{ fontSize:9, padding:"2px 8px", borderRadius:99, background:"#8B5CF618", color:"#A78BFA", border:"1px solid #8B5CF630" }}>🌍 Foreign</span>}
-              {hovered.gang_affiliation && hovered.gang_affiliation!=="No Gang Affiliation" && <span style={{ fontSize:9, padding:"2px 8px", borderRadius:99, background:"#EF444418", color:"#F87171", border:"1px solid #EF444430" }}>⚠ Gang</span>}
-            </div>
-          </div>
-
-          {[
-            ["Case ID",         hovered.id],
-            ["Primary Offence", hovered.primary_offence],
-            ["Secondary",       hovered.secondary_offence],
-            ["Location",        hovered.location],
-            ["Gender",          hovered.gender],
-            ["Date of Birth",   hovered.dob],
-            ["Arrest Year",     hovered.arrest_year],
-            ["Convictions",     hovered.convictions != null ? `${hovered.convictions} prior conviction${hovered.convictions!==1?"s":""}` : null],
-            ["Gang",            hovered.gang_affiliation && hovered.gang_affiliation!=="No Gang Affiliation" ? hovered.gang_affiliation : null],
-            ["Deportation",     hovered.deportation_status && hovered.deportation_status!=="Not Deported" ? hovered.deportation_status : null],
-          ].filter(([,v]) => v).map(([l,v]) => (
-            <div key={l} style={{ marginBottom:9, paddingBottom:9, borderBottom:"1px solid rgba(255,255,255,0.04)" }}>
-              <div style={{ fontSize:8, color:"rgba(255,255,255,0.25)", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:2 }}>{l}</div>
-              <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)", lineHeight:1.4 }}>{v}</div>
+          <div style={{ fontSize:9,fontWeight:600,color:MUTED,letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:10 }}>Risk Filter</div>
+          {RISK_ORDER.map(r => (
+            <div key={r} onClick={() => setRiskFilter(riskFilter===r?null:r)}
+              style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:6,cursor:"pointer",marginBottom:2, background:riskFilter===r?`${RISK_COLORS[r]}18`:"transparent",border:`1px solid ${riskFilter===r?RISK_COLORS[r]+"44":"transparent"}`, transition:"all 0.15s" }}>
+              <div style={{ width:8,height:8,borderRadius:"50%",background:RISK_COLORS[r],flexShrink:0 }}/>
+              <span style={{ fontSize:11,color:riskFilter===r?TEXT:MUTED,flex:1 }}>{r}</span>
+              <span style={{ fontSize:10,color:RISK_COLORS[r],fontFamily:"monospace" }}>{profiles.filter(p=>p.risk===r).length}</span>
             </div>
           ))}
 
-          {/* Crime type tag */}
-          <div style={{ marginTop:8, padding:"8px 10px", borderRadius:5, background:`${CRIME_COLORS[hovered.primary_offence]||"#6B7280"}15`, border:`1px solid ${CRIME_COLORS[hovered.primary_offence]||"#6B7280"}30` }}>
-            <div style={{ fontSize:8, color:"rgba(255,255,255,0.25)", letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4 }}>Category</div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:CRIME_COLORS[hovered.primary_offence]||"#6B7280", boxShadow:`0 0 5px ${CRIME_COLORS[hovered.primary_offence]||"#6B7280"}` }}/>
-              <span style={{ fontSize:11, color:CRIME_COLORS[hovered.primary_offence]||"#6B7280", fontWeight:600 }}>{getCat(hovered.primary_offence).label}</span>
+          <div style={{ height:1,background:BORDER,margin:"16px 0" }}/>
+          <div style={{ fontSize:9,color:"rgba(255,255,255,0.18)",textAlign:"center",letterSpacing:"0.06em",lineHeight:1.8 }}>
+            READ-ONLY · ANALYST VIEW<br/>NCIC FIJI · CONFIDENTIAL
+          </div>
+        </div>
+
+        {/* MAIN CONTENT */}
+        <div style={{ flex:1,padding:"22px 24px",paddingRight:selected?INSP+24:24,transition:"padding-right 0.25s ease",minWidth:0 }}>
+
+          {/* ── CHARTS ROW */}
+          <div style={{ display:"flex",gap:20,marginBottom:22 }}>
+
+            {/* Horizontal Bar Chart */}
+            <div style={{ flex:2,background:CARD,borderRadius:10,padding:"20px 24px",border:`1px solid ${BORDER}` }}>
+              <div style={{ fontSize:10,fontWeight:600,color:MUTED,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:18 }}>
+                Crime Category Breakdown
+              </div>
+              {crimeBreakdown.map(cat => (
+                <div key={cat.label} style={{ marginBottom:11 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
+                    <span style={{ fontSize:12,color:catFilters.has(cat.label)?TEXT:MUTED, fontWeight:catFilters.has(cat.label)?600:400 }}>
+                      {cat.label}
+                    </span>
+                    <span style={{ fontSize:12,color:cat.color,fontFamily:"monospace",fontWeight:600 }}>{cat.count}</span>
+                  </div>
+                  <div style={{ height:7,background:"rgba(255,255,255,0.06)",borderRadius:4,overflow:"hidden",cursor:"pointer" }}
+                    onClick={() => toggleCat(cat.label)}>
+                    <div style={{ height:"100%",borderRadius:4,background:cat.color, width:`${(cat.count/maxCount)*100}%`,
+                      boxShadow:`0 0 10px ${cat.color}55`,transition:"width 0.8s ease" }}/>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Donut + Risk Legend */}
+            <div style={{ flex:1,background:CARD,borderRadius:10,padding:"20px 24px",border:`1px solid ${BORDER}`,display:"flex",flexDirection:"column",alignItems:"center" }}>
+              <div style={{ fontSize:10,fontWeight:600,color:MUTED,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:18,alignSelf:"flex-start" }}>
+                Risk Distribution
+              </div>
+              <DonutChart segments={riskBreakdown} total={stats.total}/>
+              <div style={{ marginTop:18,width:"100%" }}>
+                {riskBreakdown.map(r => (
+                  <div key={r.label}
+                    onClick={() => setRiskFilter(riskFilter===r.label?null:r.label)}
+                    style={{ display:"flex",alignItems:"center",gap:8,padding:"6px 0",cursor:"pointer",borderBottom:`1px solid ${BORDER}` }}>
+                    <div style={{ width:10,height:10,borderRadius:2,background:r.color,flexShrink:0 }}/>
+                    <span style={{ fontSize:11,color:riskFilter===r.label?TEXT:MUTED,flex:1 }}>{r.label}</span>
+                    <span style={{ fontSize:11,color:r.color,fontFamily:"monospace",fontWeight:600 }}>{r.value}</span>
+                    <span style={{ fontSize:10,color:"rgba(255,255,255,0.25)",fontFamily:"monospace",minWidth:32,textAlign:"right" }}>
+                      {Math.round(r.value/stats.total*100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── PROFILE TABLE */}
+          <div style={{ background:CARD,borderRadius:10,border:`1px solid ${BORDER}` }}>
+
+            {/* Table controls */}
+            <div style={{ padding:"14px 20px",borderBottom:`1px solid ${BORDER}`,display:"flex",alignItems:"center",gap:12 }}>
+              <div style={{ flex:1,fontSize:11,fontWeight:600,color:MUTED,letterSpacing:"0.08em",textTransform:"uppercase" }}>
+                Criminal Profiles
+                <span style={{ marginLeft:8,color:"#818CF8",fontFamily:"monospace" }}>{tableRows.length}</span>
+                {tableRows.length !== profiles.length &&
+                  <span style={{ color:"rgba(255,255,255,0.2)" }}> / {profiles.length}</span>}
+              </div>
+              <input value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search name, ID, offence, location…"
+                style={{ background:"rgba(255,255,255,0.05)",border:`1px solid ${BORDER}`,borderRadius:6, padding:"7px 13px",color:TEXT,fontSize:11,width:290 }}/>
+              {hasFilters && (
+                <button onClick={clearAll}
+                  style={{ background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.25)",color:"#818CF8",fontSize:10,padding:"7px 14px",borderRadius:5,cursor:"pointer",whiteSpace:"nowrap" }}>
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowX:"auto" }}>
+              <table style={{ width:"100%",borderCollapse:"collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom:`1px solid ${BORDER}` }}>
+                    {[
+                      { key:"id",              label:"ID",       w:90  },
+                      { key:"name",            label:"Name",     w:165 },
+                      { key:"risk",            label:"Risk",     w:105 },
+                      { key:"status",          label:"Status",   w:145 },
+                      { key:"primary_offence", label:"Primary Offence", w:"auto" },
+                      { key:"nationality_type",label:"Nat.",     w:80  },
+                      { key:"convictions",     label:"Conv.",    w:65  },
+                      { key:"location",        label:"Location", w:130 },
+                    ].map(col => (
+                      <th key={col.key} onClick={() => handleSort(col.key)}
+                        style={{ padding:"10px 14px",textAlign:"left",fontSize:9,fontWeight:600,color:MUTED, letterSpacing:"0.1em",textTransform:"uppercase",width:col.w,whiteSpace:"nowrap" }}>
+                        {col.label}<SortIcon col={col.key}/>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableRows.length === 0 ? (
+                    <tr><td colSpan={8} style={{ padding:44,textAlign:"center",color:MUTED,fontSize:13 }}>
+                      No profiles match your filters
+                    </td></tr>
+                  ) : tableRows.map(p => (
+                    <tr key={p.id} className="prof-row"
+                      onClick={() => setSelected(selected?.id===p.id ? null : p)}
+                      style={{ borderBottom:`1px solid ${BORDER}`, background:selected?.id===p.id?"rgba(99,102,241,0.1)":"transparent", transition:"background 0.1s" }}>
+                      <td style={{ padding:"10px 14px",fontFamily:"monospace",fontSize:11,color:MUTED }}>{p.id}</td>
+                      <td style={{ padding:"10px 14px" }}>
+                        <div style={{ fontSize:12,fontWeight:500,color:TEXT }}>{p.name}</div>
+                        {p.alias && <div style={{ fontSize:10,color:MUTED,marginTop:1 }}>aka {p.alias}</div>}
+                      </td>
+                      <td style={{ padding:"10px 14px" }}>
+                        <Badge label={p.risk} color={RISK_COLORS[p.risk]||MUTED}/>
+                      </td>
+                      <td style={{ padding:"10px 14px" }}>
+                        <Badge label={p.status||"–"} color={STATUS_COLORS[p.status]||MUTED}/>
+                      </td>
+                      <td style={{ padding:"10px 14px" }}>
+                        <div style={{ display:"flex",alignItems:"center",gap:6,fontSize:11,color:MUTED }}>
+                          <div style={{ width:6,height:6,borderRadius:1,background:CRIME_COLORS[p.primary_offence]||"#6B7280",flexShrink:0 }}/>
+                          {p.primary_offence}
+                        </div>
+                      </td>
+                      <td style={{ padding:"10px 14px",fontSize:10, color:p.nationality_type==="Foreign National"?"#A78BFA":MUTED }}>
+                        {p.nationality_type==="Foreign National" ? "🌍 Foreign" : "Local"}
+                      </td>
+                      <td style={{ padding:"10px 14px",fontFamily:"monospace",fontSize:11, color:(p.convictions||0)>2?"#F87171":MUTED, textAlign:"center" }}>
+                        {p.convictions||0}
+                      </td>
+                      <td style={{ padding:"10px 14px",fontSize:11,color:MUTED }}>{p.location||"–"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── RIGHT INSPECTOR PANEL */}
+      {selected && (
+        <div style={{ position:"fixed",top:116,right:0,bottom:0,width:INSP, background:"rgba(13,20,38,0.99)",borderLeft:`1px solid ${BORDER}`, padding:"18px 16px",overflowY:"auto",zIndex:350,animation:"slideIn 0.2s ease" }}>
+
+          {/* Header */}
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+            <div style={{ fontSize:9,fontWeight:600,color:MUTED,letterSpacing:"0.12em",textTransform:"uppercase" }}>Profile Detail</div>
+            <button onClick={() => setSelected(null)}
+              style={{ background:"rgba(255,255,255,0.07)",border:`1px solid ${BORDER}`,color:MUTED, width:26,height:26,borderRadius:5,cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center" }}>
+              ✕
+            </button>
+          </div>
+
+          {/* Photo + name card */}
+          <div style={{ background:`linear-gradient(135deg,${CRIME_COLORS[selected.primary_offence]||"#6B7280"}18,rgba(99,102,241,0.08))`, border:`1px solid ${CRIME_COLORS[selected.primary_offence]||"#6B7280"}35`,borderRadius:9,padding:16,marginBottom:18 }}>
+            {selected.photo_url && (
+              <img src={selected.photo_url} alt=""
+                style={{ width:58,height:58,borderRadius:7,objectFit:"cover",objectPosition:"top center", marginBottom:12,border:`2px solid ${CRIME_COLORS[selected.primary_offence]||"#6B7280"}55` }}/>
+            )}
+            <div style={{ fontSize:16,fontWeight:700,marginBottom:3 }}>{selected.name}</div>
+            {selected.alias && <div style={{ fontSize:11,color:MUTED,marginBottom:12 }}>aka {selected.alias}</div>}
+            <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+              <Badge label={selected.risk} color={RISK_COLORS[selected.risk]||MUTED}/>
+              <Badge label={selected.status||"–"} color={STATUS_COLORS[selected.status]||MUTED}/>
+              {selected.nationality_type==="Foreign National" && <Badge label="Foreign" color="#A78BFA"/>}
+              {selected.gang_affiliation && selected.gang_affiliation!=="No Gang Affiliation" && <Badge label="Gang" color="#F87171"/>}
+            </div>
+          </div>
+
+          {/* Detail rows */}
+          {[
+            ["Case ID",        selected.id],
+            ["Primary Offence",selected.primary_offence],
+            ["Category",       getCat(selected.primary_offence).label],
+            ["Secondary",      selected.secondary_offence],
+            ["Location",       selected.location],
+            ["Gender",         selected.gender],
+            ["Date of Birth",  selected.dob],
+            ["Arrest Year",    selected.arrest_year?.toString()],
+            ["Convictions",    selected.convictions!=null ? `${selected.convictions} prior conviction${selected.convictions!==1?"s":""}` : null],
+            ["Nationality",    selected.nationality_type],
+            ["Gang",           selected.gang_affiliation && selected.gang_affiliation!=="No Gang Affiliation" ? selected.gang_affiliation : null],
+            ["Deportation",    selected.deportation_status && selected.deportation_status!=="Not Deported" ? selected.deportation_status : null],
+          ].filter(([,v]) => v).map(([label,val]) => (
+            <div key={label} style={{ marginBottom:13,paddingBottom:13,borderBottom:`1px solid ${BORDER}` }}>
+              <div style={{ fontSize:9,color:MUTED,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:3 }}>{label}</div>
+              <div style={{ fontSize:12,color:TEXT,lineHeight:1.5 }}>{val}</div>
+            </div>
+          ))}
+
+          {/* Crime category tag */}
+          <div style={{ marginTop:4,padding:"10px 12px",borderRadius:7, background:`${CRIME_COLORS[selected.primary_offence]||"#6B7280"}12`, border:`1px solid ${CRIME_COLORS[selected.primary_offence]||"#6B7280"}30` }}>
+            <div style={{ fontSize:9,color:MUTED,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:5 }}>Crime Category</div>
+            <div style={{ display:"flex",alignItems:"center",gap:7 }}>
+              <div style={{ width:8,height:8,borderRadius:2,background:getCat(selected.primary_offence).color }}/>
+              <span style={{ fontSize:12,color:getCat(selected.primary_offence).color,fontWeight:600 }}>
+                {getCat(selected.primary_offence).label}
+              </span>
             </div>
           </div>
         </div>
