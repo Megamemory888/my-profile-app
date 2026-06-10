@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 import OfficerPortal from "./OfficerPortal";
+import AnalystDashboard from "./AnalystDashboard";
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 const OFFENCES = ["Aggravated Assault","Armed Robbery","Bribery","Burglary","Counterfeit Operations","Cybercrime","Domestic Violence","Drug Trafficking","Extortion","Fraud","Human Trafficking","Identity Fraud","Illegal Firearm Possession","Insurance Fraud","Kidnapping","Money Laundering","Organized Crime Activity","Smuggling","Tax Evasion","Vehicle Theft"];
@@ -765,6 +766,7 @@ export default function App() {
 
   if(!user)return <LoginPage onLogin={()=>{}} />;
   if(userRole==="officer")return <OfficerPortal user={user} officer={officerProfile} onLogout={async()=>{await supabase.auth.signOut();}}/>;
+  if(userRole==="analyst")return <AnalystDashboard onLogout={async()=>{await supabase.auth.signOut();}}/> ;
 
   const DPRow=({label,value,icon})=>!value?null:(
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",fontSize:12,gap:8,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
