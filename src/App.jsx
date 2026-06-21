@@ -73,11 +73,11 @@ const STATUS_STYLE = {
 };
 
 const C = {
-  bg:"#F4F5F7",surface:"#FFFFFF",surface2:"#F0F2F5",
-  nav:"#1C2B4A",navText:"#FFFFFF",navMuted:"rgba(255,255,255,0.55)",
-  border:"#DDE1E9",border2:"#C8CDD8",
-  text:"#1A1D23",text2:"#4A5568",text3:"#7B8794",
-  accent:"#1A56DB",accentL:"#EBF2FF",
+  bg:"#F5F7FA",surface:"#FFFFFF",surface2:"#F8FAFC",
+  nav:"#091A33",navText:"#FFFFFF",navMuted:"rgba(255,255,255,0.5)",
+  border:"#D9E1EA",border2:"#C8CDD8",
+  text:"#1B2A3B",text2:"#5B6675",text3:"#8B96A0",
+  accent:"#1565C0",accentL:"#EFF3F8",
   foreign:"#2D1B69",foreignBg:"#EDE9FF",foreignBorder:"#C4B5FD",
 };
 
@@ -785,8 +785,11 @@ export default function App() {
 
     {/* Nav */}
     <div style={{display:"flex",alignItems:"center",padding:"0 24px",height:56,background:C.nav,gap:12,position:"sticky",top:0,zIndex:50}}>
-      <div style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🛡️</div>
-      <div><div style={{fontSize:14,fontWeight:700,color:"#fff",lineHeight:1.2}}>Criminal Intelligence System</div><div style={{fontSize:10,color:C.navMuted}}>Fiji Central Criminal Intelligence</div></div>
+      <div style={{width:38,height:38,borderRadius:5,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.14)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🇫🇯</div>
+      <div style={{borderRight:"1px solid rgba(255,255,255,0.12)",paddingRight:14}}>
+        <div style={{fontSize:11,fontWeight:700,color:"#fff",letterSpacing:"0.07em",lineHeight:1.2}}>FIJI CENTRAL CRIMINAL INTELLIGENCE SYSTEM</div>
+        <div style={{fontSize:8,color:"rgba(255,255,255,0.44)",letterSpacing:"0.12em",textTransform:"uppercase",marginTop:2}}>Republic of Fiji · Ministry of Home Affairs &amp; Immigration</div>
+      </div>
       <div style={{flex:1}}/>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{fontSize:11,color:C.navMuted}}><span style={{color:"rgba(255,255,255,0.4)",marginRight:4}}>Admin:</span>{user.email}</div>
@@ -798,16 +801,20 @@ export default function App() {
     {/* KPIs */}
     <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",background:C.surface,borderBottom:`1px solid ${C.border}`}}>
       {[
-        {l:"Wanted",v:wanted,c:"#7A1A1A",bg:"#FDEAEA",icon:"🔴"},
-        {l:"In custody",v:inCustody,c:"#042C53",bg:"#E6F1FB",icon:"🔵"},
-        {l:"Severe risk",v:severe,c:"#4A1B0C",bg:"#FAECE7",icon:"🟠"},
-        {l:"Photos on file",v:withPhoto,c:"#173404",bg:"#EAF3DE",icon:"🟢"},
-        {l:"Foreign nationals",v:foreignNationals,c:C.foreign,bg:C.foreignBg,icon:"🌍"},
-        {l:"Total profiles",v:db.length,c:"#26215C",bg:"#EEEDFE",icon:"🟣"},
+        {l:"WANTED",           v:wanted,          dot:"#C62828"},
+        {l:"IN CUSTODY",       v:inCustody,        dot:"#5B6675"},
+        {l:"SEVERE RISK",      v:severe,           dot:"#F57C00"},
+        {l:"PHOTOS ON FILE",   v:withPhoto,        dot:"#2E7D32"},
+        {l:"FOREIGN NATIONALS",v:foreignNationals, dot:"#1565C0"},
+        {l:"TOTAL PROFILES",   v:db.length,        dot:"#0F2747"},
       ].map(k=>(
-        <div key={k.l} style={{padding:"12px 16px",borderRight:`1px solid ${C.border}`,background:k.bg}}>
-          <div style={{fontSize:10,color:k.c,fontWeight:600,marginBottom:4,opacity:0.7}}>{k.icon} {k.l.toUpperCase()}</div>
-          <div style={{fontSize:22,fontWeight:700,color:k.c,letterSpacing:"-0.02em"}}>{k.v}</div>
+        <div key={k.l} style={{padding:"10px 16px 10px",borderRight:`1px solid ${C.border}`,background:"#FFFFFF",position:"relative"}}>
+          <div style={{position:"absolute",top:0,left:4,right:4,height:3,background:k.dot,borderRadius:"0 0 2px 2px"}}/>
+          <div style={{fontSize:22,fontWeight:700,color:"#1B2A3B",letterSpacing:"-0.02em",fontFamily:"monospace",marginTop:4}}>{k.v}</div>
+          <div style={{display:"flex",alignItems:"center",gap:4,marginTop:5}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:k.dot,flexShrink:0}}/>
+            <div style={{fontSize:8,color:"#5B6675",fontWeight:600,letterSpacing:"0.06em"}}>{k.l}</div>
+          </div>
         </div>
       ))}
     </div>
