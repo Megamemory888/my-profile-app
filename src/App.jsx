@@ -997,11 +997,28 @@ export default function App() {
             <div style={{flex:1,overflowY:"auto"}}>
               {dpTab==="details"&&<div>
                 {/* Biometric strip */}
-                <div style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
-                  {sel.thumb_url?<img src={sel.thumb_url} alt="" style={{width:40,height:40,borderRadius:6,objectFit:"cover",border:`1px solid ${C.border2}`}}/>:<div style={{width:40,height:40,borderRadius:6,background:C.surface,border:`1px dashed ${C.border2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:C.text3}}>🖐</div>}
-                  <div style={{fontSize:11,lineHeight:1.6}}>
-                    <div style={{color:sel.thumb_url?C.accent:C.text3,fontWeight:600}}>{sel.thumb_url?"✓ Fingerprint on file":"No fingerprint"}</div>
-                    <div style={{color:C.text3}}>{sel.photo_url?"✓ Photo on file":"No photo"}</div>
+                <div style={{padding:"14px 14px 10px",background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
+                  <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+                    <div>
+                      <div style={{fontSize:8,color:C.text3,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:5}}>Photograph</div>
+                      {sel.photo_url
+                        ?<img src={sel.photo_url} alt="" style={{width:160,height:192,borderRadius:3,objectFit:"cover",objectPosition:"top center",border:`2px solid ${C.border2}`,display:"block"}}/>
+                        :<div style={{width:160,height:192,borderRadius:3,background:C.surface,border:`1.5px dashed ${C.border2}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}>
+                          <div style={{fontSize:32,color:C.text3}}>📷</div>
+                          <div style={{fontSize:9,color:C.text3,letterSpacing:"0.06em"}}>No Photo</div>
+                        </div>
+                      }
+                    </div>
+                    <div>
+                      <div style={{fontSize:8,color:C.text3,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:5}}>Fingerprint</div>
+                      {sel.thumb_url
+                        ?<img src={sel.thumb_url} alt="" style={{width:80,height:80,borderRadius:3,objectFit:"cover",border:`2px solid ${C.border2}`,display:"block"}}/>
+                        :<div style={{width:80,height:80,borderRadius:3,background:C.surface,border:`1.5px dashed ${C.border2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,color:C.text3}}>🖐</div>
+                      }
+                      <div style={{fontSize:9,color:sel.thumb_url?C.accent:C.text3,fontWeight:600,marginTop:5}}>
+                        {sel.thumb_url?"✓ On file":"No fingerprint"}
+                      </div>
+                    </div>
                   </div>
                 </div>
                 {/* Offence */}
