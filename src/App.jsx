@@ -997,26 +997,28 @@ export default function App() {
             <div style={{flex:1,overflowY:"auto"}}>
               {dpTab==="details"&&<div>
                 {/* Biometric strip */}
-                <div style={{padding:"14px 14px 10px",background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
-                  <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-                    <div>
-                      <div style={{fontSize:8,color:C.text3,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:5}}>Photograph</div>
-                      {sel.photo_url
-                        ?<img src={sel.photo_url} alt="" style={{width:160,height:192,borderRadius:3,objectFit:"cover",objectPosition:"top center",border:`2px solid ${C.border2}`,display:"block"}}/>
-                        :<div style={{width:160,height:192,borderRadius:3,background:C.surface,border:`1.5px dashed ${C.border2}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6}}>
-                          <div style={{fontSize:32,color:C.text3}}>📷</div>
-                          <div style={{fontSize:9,color:C.text3,letterSpacing:"0.06em"}}>No Photo</div>
-                        </div>
-                      }
-                    </div>
-                    <div>
-                      <div style={{fontSize:8,color:C.text3,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:5}}>Fingerprint</div>
+                <div style={{padding:"14px",background:C.surface2,borderBottom:`1px solid ${C.border}`}}>
+                  {/* Passport Photo */}
+                  <div style={{marginBottom:12}}>
+                    <div style={{fontSize:8,color:C.text3,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:6}}>Photograph</div>
+                    {sel.photo_url
+                      ?<img src={sel.photo_url} alt="" style={{width:"100%",height:312,borderRadius:3,objectFit:"cover",objectPosition:"top center",border:`2px solid ${C.border2}`,display:"block"}}/>
+                      :<div style={{width:"100%",height:312,borderRadius:3,background:C.surface,border:`1.5px dashed ${C.border2}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8}}>
+                        <div style={{fontSize:52,color:C.text3}}>📷</div>
+                        <div style={{fontSize:10,color:C.text3,letterSpacing:"0.08em",textTransform:"uppercase"}}>No Photo on File</div>
+                      </div>
+                    }
+                  </div>
+                  {/* Thumbprint */}
+                  <div>
+                    <div style={{fontSize:8,color:C.text3,textTransform:"uppercase",letterSpacing:"0.08em",fontWeight:700,marginBottom:6}}>Fingerprint</div>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
                       {sel.thumb_url
-                        ?<img src={sel.thumb_url} alt="" style={{width:80,height:80,borderRadius:3,objectFit:"cover",border:`2px solid ${C.border2}`,display:"block"}}/>
-                        :<div style={{width:80,height:80,borderRadius:3,background:C.surface,border:`1.5px dashed ${C.border2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,color:C.text3}}>🖐</div>
+                        ?<img src={sel.thumb_url} alt="" style={{width:130,height:130,borderRadius:3,objectFit:"cover",border:`2px solid ${C.border2}`,display:"block"}}/>
+                        :<div style={{width:130,height:130,borderRadius:3,background:C.surface,border:`1.5px dashed ${C.border2}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:46,color:C.text3}}>🖐</div>
                       }
-                      <div style={{fontSize:9,color:sel.thumb_url?C.accent:C.text3,fontWeight:600,marginTop:5}}>
-                        {sel.thumb_url?"✓ On file":"No fingerprint"}
+                      <div style={{fontSize:10,color:sel.thumb_url?C.accent:C.text3,fontWeight:600}}>
+                        {sel.thumb_url?"✓ Fingerprint\non file":"No fingerprint\non file"}
                       </div>
                     </div>
                   </div>

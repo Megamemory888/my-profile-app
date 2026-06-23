@@ -538,16 +538,16 @@ export default function AnalystDashboard({ onLogout }) {
             <div style={{textAlign:"center",marginBottom:16,paddingBottom:16,borderBottom:`1px solid ${BORDER}`}}>
               {selected.photo_url ? (
                 <img src={selected.photo_url} alt={selected.name}
-                  style={{width:160,height:192,objectFit:"cover",objectPosition:"top center",
+                  style={{width:220,height:264,objectFit:"cover",objectPosition:"top center",
                     borderRadius:4,border:`2px solid ${BORDER}`,marginBottom:10,
                     boxShadow:"0 3px 10px rgba(0,0,0,0.13)",display:"inline-block"}}/>
               ) : (
-                <div style={{width:160,height:192,borderRadius:4,background:`${NAVY}0C`,
+                <div style={{width:220,height:264,borderRadius:4,background:`${NAVY}0C`,
                   border:`2px solid ${BORDER}`,display:"inline-flex",alignItems:"center",
                   justifyContent:"center",marginBottom:10,boxShadow:"0 2px 6px rgba(0,0,0,0.06)"}}>
                   <div style={{textAlign:"center"}}>
-                    <div style={{fontSize:26,color:`${NAVY}35`,marginBottom:4}}>👤</div>
-                    <div style={{fontSize:7,color:SLATE,letterSpacing:"0.12em",textTransform:"uppercase"}}>No Photo</div>
+                    <div style={{fontSize:52,color:`${NAVY}35`,marginBottom:6}}>👤</div>
+                    <div style={{fontSize:9,color:SLATE,letterSpacing:"0.12em",textTransform:"uppercase"}}>No Photo on File</div>
                   </div>
                 </div>
               )}
