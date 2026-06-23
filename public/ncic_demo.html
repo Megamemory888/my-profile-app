@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NCIC — Fiji Central Criminal Intelligence System</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#000;overflow:hidden;width:100vw;height:100vh;}
+
+  /* ── SCENE ENGINE ── */
+  .scene{position:absolute;inset:0;opacity:0;transition:opacity 0.8s ease;pointer-events:none;display:flex;flex-direction:column;}
+  .scene.active{opacity:1;pointer-events:auto;}
+
+  /* ── CALLOUT LABELS ── */
+  .callout{position:absolute;opacity:0;transform:translateX(-10px);transition:all 0.5s ease;}
+  .callout.show{opacity:1;transform:translateX(0);}
+  .callout-box{background:rgba(255,210,0,0.92);color:#091A33;font-size:11px;font-weight:700;
+    padding:5px 10px;border-radius:3px;letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap;
+    box-shadow:0 2px 12px rgba(0,0,0,0.4);}
+  .callout-line{width:40px;height:2px;background:#FFD200;}
+  .callout.right .callout-line{margin-left:auto;}
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar{position:fixed;bottom:0;left:0;height:3px;background:#FFD200;z-index:999;transition:width 0.3s linear;}
+
+  /* ── SCENE COUNTER ── */
+  #scene-label{position:fixed;top:16px;right:20px;font-size:10px;color:rgba(255,255,255,0.4);
+    letter-spacing:0.1em;text-transform:uppercase;z-index:999;}
+
+  /* ── REPLAY BUTTON ── */
+  #replay{position:fixed;bottom:20px;right:20px;background:#FFD200;color:#091A33;border:none;
+    padding:8px 18px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:0.08em;
+    cursor:pointer;z-index:999;text-transform:uppercase;display:none;}
+
+  /* ════════════════════════════════════════
+     SCENE 1 — TITLE CARD
+  ════════════════════════════════════════ */
+  #s1{background:linear-gradient(135deg,#060E1F 0%,#0F2747 60%,#1A3A5C 100%);
+    justify-content:center;align-items:center;text-align:center;}
+  #s1 .flag{font-size:72px;margin-bottom:24px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.5));}
+  #s1 .title{font-size:36px;font-weight:800;color:#fff;letter-spacing:0.12em;text-transform:uppercase;
+    line-height:1.2;margin-bottom:10px;text-shadow:0 2px 20px rgba(0,0,0,0.5);}
+  #s1 .subtitle{font-size:13px;color:rgba(255,255,255,0.55);letter-spacing:0.25em;text-transform:uppercase;
+    margin-bottom:32px;}
+  #s1 .tagline{font-size:18px;color:#FFD200;font-weight:300;letter-spacing:0.08em;font-style:italic;}
+  #s1 .divider{width:80px;height:2px;background:#FFD200;margin:20px auto;}
+  #s1 .ministry{font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:0.2em;text-transform:uppercase;
+    margin-top:24px;}
+  #s1 .restricted{position:absolute;top:0;left:0;right:0;background:#C62828;color:#fff;
+    font-size:10px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+    text-align:center;padding:6px;}
+  #s1 .fade-in{opacity:0;transform:translateY(20px);transition:all 0.7s ease;}
+
+  /* ════════════════════════════════════════
+     SCENE 2 — LOGIN SCREEN
+  ════════════════════════════════════════ */
+  #s2{background:#F5F7FA;flex-direction:row;}
+  #s2 .login-left{width:60%;background:linear-gradient(160deg,#0A1628 0%,#0F2747 50%,#1A3A6C 100%);
+    padding:60px;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+  #s2 .login-left::before{content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse at 30% 50%,rgba(255,210,0,0.05),transparent 60%);}
+  #s2 .login-right{width:40%;background:#fff;display:flex;align-items:center;justify-content:center;padding:60px;}
+  #s2 .logo-badge{display:flex;align-items:center;gap:14px;margin-bottom:48px;}
+  #s2 .logo-icon{width:52px;height:52px;background:rgba(255,255,255,0.1);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;font-size:26px;}
+  #s2 .logo-text-top{font-size:14px;font-weight:700;color:#fff;letter-spacing:0.08em;text-transform:uppercase;}
+  #s2 .logo-text-bot{font-size:9px;color:rgba(255,255,255,0.45);letter-spacing:0.15em;text-transform:uppercase;}
+  #s2 .hero-title{font-size:40px;font-weight:800;color:#fff;line-height:1.2;margin-bottom:16px;}
+  #s2 .hero-desc{font-size:13px;color:rgba(255,255,255,0.55);line-height:1.7;max-width:380px;margin-bottom:40px;}
+  #s2 .feature-item{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;}
+  #s2 .feature-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  #s2 .feature-name{font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;}
+  #s2 .feature-desc{font-size:11px;color:rgba(255,255,255,0.5);}
+  #s2 .restricted-banner{position:absolute;top:0;left:0;right:0;background:#C62828;color:#fff;
+    font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;padding:5px;text-align:center;}
+  #s2 .sign-in-form{width:100%;max-width:320px;}
+  #s2 .form-title{font-size:24px;font-weight:700;color:#1B2A3B;margin-bottom:6px;}
+  #s2 .form-sub{font-size:12px;color:#8B96A0;margin-bottom:28px;}
+  #s2 .form-label{font-size:10px;font-weight:700;color:#5B6675;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:5px;}
+  #s2 .form-input{width:100%;border:1.5px solid #D9E1EA;border-radius:6px;padding:10px 14px;
+    font-size:13px;color:#1B2A3B;background:#F8FAFC;margin-bottom:16px;}
+  #s2 .form-input.active{border-color:#0F2747;box-shadow:0 0 0 3px rgba(15,39,71,0.1);}
+  #s2 .sign-btn{width:100%;background:#0F2747;color:#fff;border:none;border-radius:6px;
+    padding:12px;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;}
+  #s2 .auth-warning{background:#FFF8E1;border:1px solid #FFD200;border-radius:6px;padding:12px;
+    margin-top:16px;font-size:10px;color:#5B6675;line-height:1.5;}
+  #s2 .auth-warning strong{color:#C62828;}
+
+  /* ════════════════════════════════════════
+     SCENE 3 — ADMIN DASHBOARD
+  ════════════════════════════════════════ */
+  #s3{background:#F5F7FA;flex-direction:column;}
+  .dash-header{background:#091A33;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .dash-header-left{display:flex;align-items:center;gap:14px;}
+  .dash-flag{font-size:26px;}
+  .dash-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:0.1em;text-transform:uppercase;}
+  .dash-subtitle{font-size:8px;color:rgba(255,255,255,0.45);letter-spacing:0.12em;text-transform:uppercase;}
+  .dash-role{font-size:10px;color:rgba(255,255,255,0.55);display:flex;align-items:center;gap:8px;}
+  .kpi-strip{display:flex;padding:16px 24px;gap:12px;flex-shrink:0;}
+  .kpi-card{background:#fff;border-radius:6px;padding:14px 16px;flex:1;position:relative;
+    box-shadow:0 1px 6px rgba(0,0,0,0.06);border:1px solid #D9E1EA;overflow:hidden;}
+  .kpi-bar{position:absolute;top:0;left:4px;right:4px;height:3px;border-radius:0 0 2px 2px;}
+  .kpi-num{font-size:26px;font-weight:800;color:#1B2A3B;font-family:monospace;margin-bottom:4px;}
+  .kpi-label{display:flex;align-items:center;gap:4px;}
+  .kpi-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+  .kpi-text{font-size:8px;color:#5B6675;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;}
+  .dash-body{display:flex;flex:1;overflow:hidden;gap:0;}
+  .dash-table-area{flex:1;overflow:hidden;padding:0 24px 16px;}
+  .table-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .tab-btn{padding:6px 14px;font-size:10px;font-weight:600;border:none;background:none;cursor:pointer;
+    border-bottom:2px solid transparent;color:#5B6675;letter-spacing:0.04em;}
+  .tab-btn.active{color:#0F2747;border-bottom-color:#0F2747;}
+  .filter-pill{background:#fff;border:1px solid #D9E1EA;border-radius:20px;padding:5px 14px;
+    font-size:10px;color:#5B6675;display:flex;align-items:center;gap:5px;}
+  .search-box{background:#fff;border:1px solid #D9E1EA;border-radius:20px;padding:5px 14px;
+    font-size:10px;color:#5B6675;display:flex;align-items:center;gap:5px;flex:1;max-width:200px;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  th{text-align:left;padding:7px 10px;font-size:9px;font-weight:700;color:#8B96A0;
+    letter-spacing:0.08em;text-transform:uppercase;border-bottom:1px solid #D9E1EA;}
+  td{padding:8px 10px;border-bottom:1px solid #F0F4F8;color:#1B2A3B;}
+  tr.highlight{background:#EEF4FF;}
+  .risk-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:3px;
+    font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;}
+  .risk-severe{background:#FDECEA;color:#C62828;}
+  .risk-high{background:#FEF3E2;color:#F57C00;}
+  .risk-moderate{background:#FFF8E1;color:#E65100;}
+  .risk-low{background:#E8F5E9;color:#2E7D32;}
+  .status-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:600;
+    border:1px solid currentColor;}
+  .st-custody{color:#5B6675;border-color:#CBD5E1;background:#F8FAFC;}
+  .st-wanted{color:#C62828;border-color:#F5C6C6;background:#FFF5F5;}
+  .st-invest{color:#1565C0;border-color:#BBDEFB;background:#F0F7FF;}
+  .avatar{width:30px;height:30px;border-radius:3px;background:#0F274720;display:inline-flex;
+    align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#0F2747;}
+  .type-fijian{background:#EEF7EE;color:#2E7D32;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600;}
+  .type-foreign{background:#EDE9FF;color:#4527A0;padding:2px 7px;border-radius:3px;font-size:9px;font-weight:600;}
+  .detail-panel{width:290px;background:#fff;border-left:1px solid #D9E1EA;overflow-y:auto;flex-shrink:0;}
+  .dp-header{background:#091A33;padding:14px 16px;color:#fff;}
+  .dp-avatar{width:40px;height:40px;border-radius:6px;background:#1A3A6C;display:inline-flex;
+    align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-right:10px;}
+  .dp-name{font-size:14px;font-weight:700;color:#fff;}
+  .dp-id{font-size:9px;color:rgba(255,255,255,0.5);letter-spacing:0.08em;}
+  .dp-section{padding:10px 14px;border-bottom:1px solid #EEF2F7;}
+  .dp-label{font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+  .dp-photo-placeholder{width:100%;height:220px;background:#F0F4F8;border:1.5px dashed #D9E1EA;
+    border-radius:4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+
+  /* ════════════════════════════════════════
+     SCENE 4 — OFFICER PORTAL
+  ════════════════════════════════════════ */
+  #s4{background:#F5F7FA;flex-direction:column;}
+  .officer-header{background:#091A33;padding:0 24px;height:56px;display:flex;align-items:center;gap:16px;flex-shrink:0;}
+  .officer-badge{background:#C62828;color:#fff;font-size:9px;font-weight:700;padding:3px 8px;
+    border-radius:3px;letter-spacing:0.06em;text-transform:uppercase;}
+  .officer-body{flex:1;display:flex;padding:20px 24px;gap:20px;overflow:hidden;}
+  .officer-card{background:#fff;border-radius:8px;border:1px solid #D9E1EA;box-shadow:0 1px 6px rgba(0,0,0,0.05);}
+  .officer-form{flex:1;}
+  .form-section-title{font-size:10px;font-weight:700;color:#0F2747;letter-spacing:0.1em;text-transform:uppercase;
+    padding:12px 16px;border-bottom:1px solid #EEF2F7;background:#F8FAFC;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px 16px;}
+  .form-field-label{font-size:9px;font-weight:700;color:#5B6675;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;}
+  .form-field-input{background:#F8FAFC;border:1px solid #D9E1EA;border-radius:5px;padding:8px 10px;
+    font-size:11px;color:#1B2A3B;width:100%;}
+  .form-field-input.highlight-input{border-color:#0F2747;box-shadow:0 0 0 2px rgba(15,39,71,0.1);}
+  .submit-btn{background:#0F2747;color:#fff;border:none;border-radius:6px;padding:10px 20px;
+    font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;margin:14px 16px;}
+  .officer-stats{width:220px;display:flex;flex-direction:column;gap:12px;}
+  .stat-card{padding:14px 16px;}
+  .stat-num{font-size:28px;font-weight:800;color:#1B2A3B;font-family:monospace;}
+  .stat-label{font-size:9px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;}
+  .recent-list{padding:0;}
+  .recent-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid #F0F4F8;}
+  .recent-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .recent-text{font-size:10px;color:#1B2A3B;font-weight:600;}
+  .recent-sub{font-size:9px;color:#8B96A0;}
+  .clearance-badge{background:#E8F5E9;color:#2E7D32;font-size:9px;font-weight:700;padding:2px 8px;
+    border-radius:3px;letter-spacing:0.04em;}
+
+  /* ════════════════════════════════════════
+     SCENE 5 — ANALYST DASHBOARD
+  ════════════════════════════════════════ */
+  #s5{background:#F5F7FA;flex-direction:column;}
+  .analyst-body{display:flex;flex:1;overflow:hidden;gap:0;}
+  .analyst-left{flex:1;display:flex;flex-direction:column;padding:16px 20px;gap:14px;overflow:hidden;}
+  .analyst-right{width:270px;background:#fff;border-left:1px solid #D9E1EA;overflow-y:auto;flex-shrink:0;}
+  .intel-header{font-size:9px;font-weight:700;color:#0F2747;letter-spacing:0.12em;text-transform:uppercase;
+    padding:8px 14px;background:#F0F4F8;border-bottom:1px solid #D9E1EA;display:flex;align-items:center;gap:6px;}
+  .intel-header::before{content:'';width:3px;height:12px;background:#0F2747;border-radius:2px;}
+  .charts-row{display:flex;gap:14px;flex:1;}
+  .chart-card{background:#fff;border:1px solid #D9E1EA;border-radius:6px;padding:14px;flex:1;box-shadow:0 1px 4px rgba(0,0,0,0.04);}
+  .chart-title{font-size:9px;font-weight:700;color:#5B6675;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
+  .donut-mock{width:90px;height:90px;border-radius:50%;background:conic-gradient(#C62828 0% 40%,#F57C00 40% 60%,#E65100 60% 75%,#2E7D32 75% 100%);
+    margin:0 auto;box-shadow:inset 0 0 0 28px #fff;}
+  .bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+  .bar-label{font-size:9px;color:#5B6675;width:80px;flex-shrink:0;}
+  .bar-bg{flex:1;height:6px;background:#F0F4F8;border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;}
+  .map-mock{background:linear-gradient(135deg,#E8F0FA,#D0E0F5);border-radius:6px;flex:1;
+    position:relative;overflow:hidden;}
+  .map-grid{position:absolute;inset:0;
+    background-image:linear-gradient(rgba(15,39,71,0.07) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(15,39,71,0.07) 1px,transparent 1px);
+    background-size:30px 30px;}
+  .map-dot{position:absolute;border-radius:50%;border:2px solid #fff;}
+  .analyst-profile-img{width:100%;height:200px;background:#F0F4F8;border:1.5px dashed #D9E1EA;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;}
+  .threat-block{margin:10px 14px;padding:10px 12px;border-radius:4px;border-left:3px solid #C62828;
+    background:#FFF5F5;border:1px solid #F5C6C6;border-left:3px solid #C62828;}
+  .checklist-item{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid #F8FAFC;font-size:10px;}
+  .check-yes{color:#2E7D32;font-weight:700;}
+  .check-no{color:#C62828;font-weight:700;}
+  .official-footer{background:#091A33;color:rgba(255,255,255,0.5);font-size:8px;letter-spacing:0.1em;
+    text-transform:uppercase;text-align:center;padding:5px;flex-shrink:0;}
+
+  /* ════════════════════════════════════════
+     SCENE 6 — CLOSING
+  ════════════════════════════════════════ */
+  #s6{background:linear-gradient(135deg,#060E1F 0%,#0F2747 60%,#1A3A5C 100%);
+    justify-content:center;align-items:center;text-align:center;}
+  #s6 .close-flag{font-size:64px;margin-bottom:24px;}
+  #s6 .close-title{font-size:42px;font-weight:800;color:#FFD200;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;}
+  #s6 .close-sub{font-size:16px;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:40px;}
+  #s6 .stats-row{display:flex;gap:40px;justify-content:center;margin-bottom:40px;}
+  #s6 .stat-item{text-align:center;}
+  #s6 .stat-big{font-size:48px;font-weight:900;color:#fff;font-family:monospace;line-height:1;}
+  #s6 .stat-lbl{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:0.15em;text-transform:uppercase;margin-top:4px;}
+  #s6 .close-tagline{font-size:14px;color:rgba(255,255,255,0.4);letter-spacing:0.2em;text-transform:uppercase;}
+  #s6 .url-badge{background:rgba(255,210,0,0.12);border:1px solid rgba(255,210,0,0.3);
+    color:#FFD200;font-size:12px;padding:10px 24px;border-radius:4px;margin-top:20px;
+    letter-spacing:0.1em;display:inline-block;}
+  #s6 .fade-in{opacity:0;transform:translateY(16px);transition:all 0.6s ease;}
+
+  /* counter animation */
+  @keyframes countUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+  .count-anim{animation:countUp 0.6s ease forwards;}
+  @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.6;transform:scale(1.3);}}
+
+  /* HIGHLIGHT RING */
+  .highlight-ring{position:absolute;border:2px solid #FFD200;border-radius:6px;
+    box-shadow:0 0 0 4px rgba(255,210,0,0.2);pointer-events:none;
+    transition:all 0.4s ease;opacity:0;}
+  .highlight-ring.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- Progress -->
+<div id="progress-bar" style="width:0%"></div>
+<div id="scene-label"></div>
+<button id="replay" onclick="location.reload()">↺ Replay</button>
+
+<!-- ══════════════════════════════════════
+     SCENE 1 — TITLE CARD
+══════════════════════════════════════ -->
+<div class="scene" id="s1">
+  <div class="restricted">Restricted — Authorised Personnel Only — NCIC Classified System</div>
+  <div class="flag fade-in" id="s1-flag">🇫🇯</div>
+  <div class="title fade-in" id="s1-title">Fiji Central Criminal<br>Intelligence System</div>
+  <div class="subtitle fade-in" id="s1-sub">National Criminal Intelligence Centre</div>
+  <div class="divider fade-in" id="s1-div"></div>
+  <div class="tagline fade-in" id="s1-tag">"Know More. Act Faster. Protect Fiji."</div>
+  <div class="ministry fade-in" id="s1-min">Proposed National Criminal Intelligence System · For Government Evaluation</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCENE 2 — LOGIN
+══════════════════════════════════════ -->
+<div class="scene" id="s2">
+  <div class="restricted-banner">Restricted — Authorised Personnel Only — NCIC Classified System</div>
+  <div class="login-left">
+    <div class="logo-badge">
+      <div class="logo-icon">🇫🇯</div>
+      <div><div class="logo-text-top">NCIC Intelligence System</div>
+      <div class="logo-text-bot">National Criminal Intelligence Centre</div></div>
+    </div>
+    <div class="hero-title">Fiji's Central<br>Criminal Intelligence<br>Platform</div>
+    <div class="hero-desc">A secure, role-based intelligence management system for authorised law enforcement personnel.</div>
+    <div class="feature-item">
+      <div class="feature-icon" style="background:rgba(255,165,0,0.15)">📋</div>
+      <div><div class="feature-name">Criminal Profiles</div>
+      <div class="feature-desc">Centralised database of suspects and known offenders across Fiji.</div></div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon" style="background:rgba(100,180,255,0.15)">🌍</div>
+      <div><div class="feature-name">Foreign Nationals</div>
+      <div class="feature-desc">Track visa overstays, immigration status and deportation records.</div></div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon" style="background:rgba(255,100,100,0.15)">🔗</div>
+      <div><div class="feature-name">Associate Networks</div>
+      <div class="feature-desc">Map gang affiliations and organised crime networks.</div></div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon" style="background:rgba(100,220,100,0.15)">📊</div>
+      <div><div class="feature-name">Intelligence Reports</div>
+      <div class="feature-desc">Risk assessments and operational intelligence in one place.</div></div>
+    </div>
+  </div>
+  <div class="login-right">
+    <div class="sign-in-form">
+      <div class="form-title">Secure Sign In</div>
+      <div class="form-sub">Enter your credentials to access the system.</div>
+      <div class="form-label">Email Address</div>
+      <div class="form-input" id="s2-email" style="color:#A0AEB8">you@ncic.gov.fj</div>
+      <div class="form-label">Password</div>
+      <div class="form-input">••••••••••••</div>
+      <button class="sign-btn">SIGN IN</button>
+      <div class="auth-warning">⚠ <strong>AUTHORISED ACCESS ONLY</strong><br>
+      This system contains classified law enforcement data. Unauthorised access is a criminal offence under the Fiji Crimes Act 2009.</div>
+    </div>
+  </div>
+  <!-- Callouts -->
+  <div class="callout" id="c2a" style="top:33%;left:42%;">
+    <div class="callout-box">📋 &nbsp;105 Criminal Profiles — searchable & filterable</div>
+  </div>
+  <div class="callout" id="c2b" style="top:43%;left:42%;">
+    <div class="callout-box">🌍 &nbsp;Foreign Nationals & deportation tracking</div>
+  </div>
+  <div class="callout" id="c2c" style="top:53%;left:42%;">
+    <div class="callout-box">🔗 &nbsp;Gang & associate network mapping</div>
+  </div>
+  <div class="callout" id="c2d" style="top:63%;left:42%;">
+    <div class="callout-box">📊 &nbsp;Intelligence reports — risk-level analysis</div>
+  </div>
+  <div class="callout" id="c2e" style="top:75%;left:42%;">
+    <div class="callout-box">🔐 &nbsp;3 role-based access levels — Admin · Officer · Analyst</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCENE 3 — ADMIN DASHBOARD
+══════════════════════════════════════ -->
+<div class="scene" id="s3">
+  <div class="dash-header">
+    <div class="dash-header-left">
+      <div class="dash-flag">🇫🇯</div>
+      <div><div class="dash-title">FIJI CENTRAL CRIMINAL INTELLIGENCE SYSTEM</div>
+      <div class="dash-subtitle">Proposed National Criminal Intelligence System · For Government Evaluation</div></div>
+    </div>
+    <div class="dash-role">Admin: ratuvuki2133@gmail.com &nbsp;|&nbsp;
+      <span style="background:#C62828;color:#fff;padding:2px 8px;border-radius:3px;font-size:9px;font-weight:700">ADMIN</span>
+    </div>
+  </div>
+  <!-- KPI Strip -->
+  <div class="kpi-strip" id="kpi-strip">
+    <div class="kpi-card">
+      <div class="kpi-bar" style="background:#C62828"></div>
+      <div class="kpi-num" id="k1">0</div>
+      <div class="kpi-label"><div class="kpi-dot" style="background:#C62828"></div><div class="kpi-text">WANTED</div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-bar" style="background:#5B6675"></div>
+      <div class="kpi-num" id="k2">0</div>
+      <div class="kpi-label"><div class="kpi-dot" style="background:#5B6675"></div><div class="kpi-text">IN CUSTODY</div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-bar" style="background:#F57C00"></div>
+      <div class="kpi-num" id="k3">0</div>
+      <div class="kpi-label"><div class="kpi-dot" style="background:#F57C00"></div><div class="kpi-text">SEVERE RISK</div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-bar" style="background:#2E7D32"></div>
+      <div class="kpi-num" id="k4">0</div>
+      <div class="kpi-label"><div class="kpi-dot" style="background:#2E7D32"></div><div class="kpi-text">PHOTOS ON FILE</div></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-bar" style="background:#1565C0"></div>
+      <div class="kpi-num" id="k5">0</div>
+      <div class="kpi-label"><div class="kpi-dot" style="background:#1565C0"></div><div class="kpi-text">FOREIGN NATIONALS</div></div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-bar" style="background:#0F2747"></div>
+      <div class="kpi-num" id="k6">0</div>
+      <div class="kpi-label"><div class="kpi-dot" style="background:#0F2747"></div><div class="kpi-text">TOTAL PROFILES</div></div>
+    </div>
+  </div>
+  <!-- Body -->
+  <div class="dash-body">
+    <div class="dash-table-area">
+      <div class="table-toolbar">
+        <span class="tab-btn active">All Profiles&nbsp;<span style="background:#0F2747;color:#fff;padding:1px 6px;border-radius:10px;font-size:9px">105</span></span>
+        <span class="tab-btn">🌍 Foreign Nationals&nbsp;<span style="background:#EDE9FF;color:#4527A0;padding:1px 6px;border-radius:10px;font-size:9px">7</span></span>
+        <span class="filter-pill">🔽 All risk</span>
+        <span class="filter-pill">🔽 All statuses</span>
+        <span class="search-box">🔍 Search name, alias, ID...</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Photo</th><th>Case ID</th><th>Name</th><th>Type</th><th>Gender</th><th>Risk</th><th>Status</th><th>Offence</th><th>Location</th><th>Year</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+      </table>
+    </div>
+    <!-- Detail panel -->
+    <div class="detail-panel">
+      <div class="dp-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="dp-avatar" style="background:#2E5E3A;font-size:11px">KR</div>
+          <div>
+            <div class="dp-name">Kalaveti Ravu</div>
+            <div class="dp-id">FJ-008 · Former Government Official</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          <span class="risk-pill risk-high">● High risk</span>
+          <span class="status-pill" style="color:#2E7D32;border-color:#A5D6A7;background:#E8F5E9">Released on Parole</span>
+          <span class="type-fijian">Fijian</span>
+        </div>
+      </div>
+      <div class="dp-section">
+        <div class="dp-label">Passport Photograph</div>
+        <div style="position:relative;width:100%;border-radius:4px;border:2px solid #D9E1EA;overflow:hidden;">
+          <img src="/kalaveti_photo.jpg" alt="Kalaveti Ravu"
+            style="width:100%;height:240px;object-fit:cover;object-position:top center;display:block;"/>
+          <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(9,26,51,0.7);padding:5px 8px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:8px;color:#fff;letter-spacing:0.08em;text-transform:uppercase">Kalaveti Ravu · FJ-008</span>
+            <span style="font-size:8px;color:#4FC3F7;font-weight:700">✓ PHOTO ON FILE</span>
+          </div>
+        </div>
+        <!-- Thumbprint -->
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px;">
+          <div style="width:70px;height:70px;background:#E8F5E9;border:2px solid #A5D6A7;border-radius:4px;
+            display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">🖐</div>
+          <div>
+            <div style="font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px">Fingerprint</div>
+            <div style="font-size:10px;color:#2E7D32;font-weight:700">✓ Fingerprint on file</div>
+            <div style="font-size:9px;color:#8B96A0;margin-top:3px">Biometric record matched</div>
+          </div>
+        </div>
+      </div>
+      <div class="dp-section">
+        <div class="dp-label">Primary Offence</div>
+        <div style="font-size:12px;font-weight:600;color:#1B2A3B">Bribery</div>
+      </div>
+      <div class="dp-section">
+        <div class="dp-label">Case Notes</div>
+        <div style="font-size:10px;color:#5B6675;line-height:1.6">Former Government Official. Released on Parole. Subject to conditions of release and regular reporting requirements.</div>
+      </div>
+      <div class="dp-section">
+        <div class="dp-label">Personal</div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#5B6675;margin-bottom:4px"><span>Gender</span><span style="color:#1B2A3B;font-weight:600">Male</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#5B6675;margin-bottom:4px"><span>Location</span><span style="color:#1B2A3B;font-weight:600">Suva</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#5B6675;"><span>Occupation</span><span style="color:#1B2A3B;font-weight:600">Former Govt. Official</span></div>
+      </div>
+    </div>
+  </div>
+  <!-- Callouts -->
+  <div class="callout" id="c3a" style="top:155px;left:24px;">
+    <div class="callout-box">Live KPI counters — instant national overview</div>
+    <div class="callout-line"></div>
+  </div>
+  <div class="callout" id="c3b" style="top:290px;left:24px;">
+    <div class="callout-box">105 real Fiji cases — searchable & filterable</div>
+  </div>
+  <div class="callout" id="c3c" style="top:290px;right:295px;text-align:right;">
+    <div class="callout-box">Click any profile → instant intelligence brief</div>
+    <div class="callout-line" style="margin-left:auto"></div>
+  </div>
+  <div class="callout" id="c3d" style="top:400px;right:295px;text-align:right;">
+    <div class="callout-box">Passport photo + thumbprint per suspect</div>
+    <div class="callout-line" style="margin-left:auto"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCENE 4 — OFFICER PORTAL
+══════════════════════════════════════ -->
+<div class="scene" id="s4">
+  <div class="officer-header">
+    <div class="dash-flag">🇫🇯</div>
+    <div><div class="dash-title">FIJI CENTRAL CRIMINAL INTELLIGENCE SYSTEM</div>
+    <div class="dash-subtitle">Proposed National Criminal Intelligence System · For Government Evaluation</div></div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+      <span class="officer-badge">OFFICER ACCESS</span>
+      <span style="font-size:10px;color:rgba(255,255,255,0.5)">Samu Finau — user1@gmail.com</span>
+    </div>
+  </div>
+  <div class="officer-body">
+    <div class="officer-card officer-form">
+      <div class="form-section-title">📋 &nbsp;Submit Incident Report</div>
+      <div class="form-grid">
+        <div>
+          <div class="form-field-label">Incident Type</div>
+          <div class="form-field-input highlight-input">Drug Trafficking</div>
+        </div>
+        <div>
+          <div class="form-field-label">Location</div>
+          <div class="form-field-input">Suva Central</div>
+        </div>
+        <div>
+          <div class="form-field-label">Date & Time</div>
+          <div class="form-field-input">23/06/2026 · 14:32</div>
+        </div>
+        <div>
+          <div class="form-field-label">Priority Level</div>
+          <div class="form-field-input highlight-input" style="color:#C62828;font-weight:700">HIGH</div>
+        </div>
+        <div style="grid-column:1/-1">
+          <div class="form-field-label">Description</div>
+          <div class="form-field-input" style="height:60px;padding-top:8px;color:#8B96A0">Suspect apprehended with 4.1kg methamphetamine at Rewa Street property...</div>
+        </div>
+        <div>
+          <div class="form-field-label">Suspect Name</div>
+          <div class="form-field-input">Imran Khan (King Khan)</div>
+        </div>
+        <div>
+          <div class="form-field-label">Officer Badge No.</div>
+          <div class="form-field-input">FPF-2847</div>
+        </div>
+      </div>
+      <button class="submit-btn">Submit Report to HQ</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;width:220px;">
+      <div class="officer-card stat-card">
+        <div class="stat-num">12</div>
+        <div class="stat-label">Reports submitted this month</div>
+      </div>
+      <div class="officer-card stat-card">
+        <div class="stat-num" style="color:#C62828">3</div>
+        <div class="stat-label">High priority active</div>
+      </div>
+      <div class="officer-card" style="padding:0;flex:1;">
+        <div class="form-section-title" style="font-size:9px;">Recent Reports</div>
+        <div class="recent-list">
+          <div class="recent-item">
+            <div class="recent-dot" style="background:#C62828"></div>
+            <div><div class="recent-text">Drug Bust · Rewa St</div><div class="recent-sub">Today 14:32</div></div>
+          </div>
+          <div class="recent-item">
+            <div class="recent-dot" style="background:#F57C00"></div>
+            <div><div class="recent-text">Armed Robbery · Nadi</div><div class="recent-sub">Yesterday</div></div>
+          </div>
+          <div class="recent-item">
+            <div class="recent-dot" style="background:#2E7D32"></div>
+            <div><div class="recent-text">Clearance Issued</div><div class="recent-sub">22/06/2026 <span class="clearance-badge">✓ Cleared</span></div></div>
+          </div>
+          <div class="recent-item">
+            <div class="recent-dot" style="background:#1565C0"></div>
+            <div><div class="recent-text">Border Alert · Nausori</div><div class="recent-sub">21/06/2026</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="callout" id="c4a" style="top:130px;left:24px;">
+    <div class="callout-box">Officers file reports directly — no paperwork</div>
+  </div>
+  <div class="callout" id="c4b" style="top:130px;right:235px;text-align:right;">
+    <div class="callout-box">Real-time stats + police clearance requests</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCENE 5 — ANALYST DASHBOARD
+══════════════════════════════════════ -->
+<div class="scene" id="s5">
+  <!-- Header -->
+  <div style="background:#091A33;padding:0 16px;height:46px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px">🇫🇯</span>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:0.1em;text-transform:uppercase">FIJI CENTRAL CRIMINAL INTELLIGENCE SYSTEM</div>
+        <div style="font-size:7px;color:rgba(255,255,255,0.4);letter-spacing:0.12em;text-transform:uppercase">Proposed National Criminal Intelligence System · For Government Evaluation</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div style="display:flex;align-items:center;gap:5px;"><div style="width:6px;height:6px;border-radius:50%;background:#2E7D32;animation:pulse-dot 2s infinite"></div><span style="font-size:9px;color:#2E7D32;font-weight:700;letter-spacing:0.06em">SYSTEM ONLINE</span></div>
+      <span style="font-size:9px;color:rgba(255,255,255,0.5);font-family:monospace">17:35:07</span>
+      <span style="font-size:9px;color:rgba(255,255,255,0.5)">105 RECORDS</span>
+      <span style="background:#1565C0;color:#fff;font-size:9px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:0.06em">ANALYST</span>
+      <span style="background:#C62828;color:#fff;font-size:9px;font-weight:700;padding:3px 8px;border-radius:3px;cursor:pointer">SIGN OUT</span>
+    </div>
+  </div>
+  <!-- KPI Strip -->
+  <div style="display:flex;border-bottom:1px solid #D9E1EA;flex-shrink:0;">
+    <div style="flex:1;padding:10px 16px;border-right:1px solid #D9E1EA;">
+      <div style="font-size:20px;font-weight:800;color:#1B2A3B;font-family:monospace">105</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#0F2747"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">TOTAL PROFILES</span></div>
+    </div>
+    <div style="flex:1;padding:10px 16px;border-right:1px solid #D9E1EA;">
+      <div style="font-size:20px;font-weight:800;color:#C62828;font-family:monospace">3</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#C62828"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">WANTED</span></div>
+    </div>
+    <div style="flex:1;padding:10px 16px;border-right:1px solid #D9E1EA;">
+      <div style="font-size:20px;font-weight:800;color:#1B2A3B;font-family:monospace">57</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#5B6675"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">IN CUSTODY</span></div>
+    </div>
+    <div style="flex:1;padding:10px 16px;border-right:1px solid #D9E1EA;">
+      <div style="font-size:20px;font-weight:800;color:#C62828;font-family:monospace">47</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#C62828"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">SEVERE RISK</span></div>
+    </div>
+    <div style="flex:1;padding:10px 16px;border-right:1px solid #D9E1EA;">
+      <div style="font-size:20px;font-weight:800;color:#F57C00;font-family:monospace">12</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#F57C00"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">HIGH RISK</span></div>
+    </div>
+    <div style="flex:1;padding:10px 16px;border-right:1px solid #D9E1EA;">
+      <div style="font-size:20px;font-weight:800;color:#1565C0;font-family:monospace">7</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#1565C0"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">FOREIGN NATIONALS</span></div>
+    </div>
+    <div style="flex:1;padding:10px 16px;">
+      <div style="font-size:20px;font-weight:800;color:#1B2A3B;font-family:monospace">0</div>
+      <div style="display:flex;align-items:center;gap:4px;margin-top:2px"><div style="width:5px;height:5px;border-radius:50%;background:#2E7D32"></div><span style="font-size:7px;color:#5B6675;text-transform:uppercase;letter-spacing:0.06em;font-weight:700">PHOTOS ON FILE</span></div>
+    </div>
+  </div>
+  <!-- Body -->
+  <div style="display:flex;flex:1;overflow:hidden;">
+    <!-- Left Sidebar -->
+    <div style="width:130px;background:#fff;border-right:1px solid #D9E1EA;padding:12px 10px;flex-shrink:0;overflow-y:auto;">
+      <div style="font-size:8px;font-weight:700;color:#5B6675;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Crime Category</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#C62828;border-radius:1px;display:inline-block"></span>Drugs</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">21</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#1565C0;border-radius:1px;display:inline-block"></span>Financial</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">18</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;background:#EEF4FF;border-radius:3px;padding:3px 4px;">
+          <span style="font-size:9px;color:#0F2747;font-weight:700;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#0F2747;border-radius:1px;display:inline-block"></span>Violence</span>
+          <span style="font-size:9px;font-weight:700;color:#0F2747">49</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#8B96A0;border-radius:1px;display:inline-block"></span>Property</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">2</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#6A1B9A;border-radius:1px;display:inline-block"></span>Organised Crime</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">5</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#00838F;border-radius:1px;display:inline-block"></span>Cyber</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">4</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#37474F;border-radius:1px;display:inline-block"></span>Firearms</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">1</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 0;">
+          <span style="font-size:9px;color:#1B2A3B;display:flex;align-items:center;gap:5px;"><span style="width:3px;height:10px;background:#A0AEB8;border-radius:1px;display:inline-block"></span>Other</span>
+          <span style="font-size:9px;font-weight:700;color:#5B6675">5</span>
+        </div>
+      </div>
+      <div style="font-size:8px;font-weight:700;color:#5B6675;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Risk Level</div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;color:#C62828;display:flex;align-items:center;gap:4px;">● Severe</span><span style="font-size:9px;font-weight:700;color:#5B6675">47</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;color:#F57C00;display:flex;align-items:center;gap:4px;">● High</span><span style="font-size:9px;font-weight:700;color:#5B6675">12</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;color:#E65100;display:flex;align-items:center;gap:4px;">● Moderate</span><span style="font-size:9px;font-weight:700;color:#5B6675">27</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:9px;color:#2E7D32;display:flex;align-items:center;gap:4px;">● Low</span><span style="font-size:9px;font-weight:700;color:#5B6675">19</span>
+        </div>
+      </div>
+      <div style="background:#F0F4F8;border-radius:4px;padding:8px;text-align:center;">
+        <div style="font-size:7px;color:#8B96A0;letter-spacing:0.08em;text-transform:uppercase;line-height:1.6">READ-ONLY ACCESS<br>ANALYST CLEARANCE<br>NCIC — OFFICIAL</div>
+      </div>
+    </div>
+    <!-- Main Area -->
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+      <!-- Charts Row -->
+      <div style="display:flex;gap:0;border-bottom:1px solid #D9E1EA;flex-shrink:0;">
+        <!-- Crime Category Distribution -->
+        <div style="flex:1.6;padding:12px 16px;border-right:1px solid #D9E1EA;">
+          <div style="font-size:8px;font-weight:700;color:#1B2A3B;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span style="width:3px;height:12px;background:#0F2747;border-radius:2px;display:inline-block"></span>CRIME CATEGORY DISTRIBUTION</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Violence</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:100%;height:100%;background:#0F2747;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">49</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Drugs</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:43%;height:100%;background:#C62828;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">21</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Financial</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:37%;height:100%;background:#1565C0;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">18</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Org. Crime</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:10%;height:100%;background:#6A1B9A;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">5</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Other</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:10%;height:100%;background:#8B96A0;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">5</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Cyber</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:8%;height:100%;background:#00838F;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">4</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Property</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:4%;height:100%;background:#37474F;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">2</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><div style="width:52px;font-size:8px;color:#5B6675;flex-shrink:0">Firearms</div><div style="flex:1;height:10px;background:#F0F4F8;border-radius:2px;overflow:hidden;"><div style="width:2%;height:100%;background:#A0AEB8;border-radius:2px;"></div></div><span style="font-size:8px;color:#5B6675;width:22px;text-align:right">1</span></div>
+          </div>
+        </div>
+        <!-- Risk Distribution Donut -->
+        <div style="width:220px;padding:12px 16px;flex-shrink:0;">
+          <div style="font-size:8px;font-weight:700;color:#1B2A3B;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;"><span style="width:3px;height:12px;background:#0F2747;border-radius:2px;display:inline-block"></span>RISK DISTRIBUTION</div>
+          <div style="position:relative;width:100px;height:100px;margin:0 auto 10px;">
+            <svg viewBox="0 0 36 36" style="width:100px;height:100px;transform:rotate(-90deg)">
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F0F4F8" stroke-width="4"/>
+              <!-- Severe 47/105 = 45% → 100.5 * 0.45 = 45.2 offset from 100.5 -->
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#C62828" stroke-width="4" stroke-dasharray="45 55" stroke-dashoffset="0"/>
+              <!-- High 12/105 = 11.4% → offset 45 -->
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F57C00" stroke-width="4" stroke-dasharray="11.5 88.5" stroke-dashoffset="-45"/>
+              <!-- Moderate 27/105 = 25.7% → offset 56.5 -->
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#E65100" stroke-width="4" stroke-dasharray="25.7 74.3" stroke-dashoffset="-56.5"/>
+              <!-- Low 19/105 = 18.1% → offset 82.2 -->
+              <circle cx="18" cy="18" r="15.9" fill="none" stroke="#2E7D32" stroke-width="4" stroke-dasharray="18.1 81.9" stroke-dashoffset="-82.2"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div style="font-size:18px;font-weight:800;color:#1B2A3B;font-family:monospace">105</div>
+              <div style="font-size:7px;color:#8B96A0;text-transform:uppercase;letter-spacing:0.06em">TOTAL</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;justify-content:space-between;font-size:9px;"><span style="color:#C62828">● Severe</span><span style="color:#5B6675"><b>47</b> &nbsp;45%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;"><span style="color:#F57C00">● High</span><span style="color:#5B6675"><b>12</b> &nbsp;11%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;"><span style="color:#E65100">● Moderate</span><span style="color:#5B6675"><b>27</b> &nbsp;26%</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:9px;"><span style="color:#2E7D32">● Low</span><span style="color:#5B6675"><b>19</b> &nbsp;18%</span></div>
+          </div>
+        </div>
+      </div>
+      <!-- Records Table -->
+      <div style="flex:1;overflow-y:auto;padding:0;">
+        <div style="padding:8px 14px;border-bottom:1px solid #D9E1EA;display:flex;align-items:center;justify-content:space-between;">
+          <div style="font-size:9px;font-weight:700;color:#1B2A3B;letter-spacing:0.06em;display:flex;align-items:center;gap:6px;"><span style="width:3px;height:12px;background:#0F2747;border-radius:2px;display:inline-block"></span>CRIMINAL INTELLIGENCE RECORDS <span style="background:#EEF4FF;color:#1565C0;font-size:8px;padding:1px 6px;border-radius:10px;font-weight:700;">105</span></div>
+          <div style="background:#F5F7FA;border:1px solid #D9E1EA;border-radius:4px;padding:4px 10px;font-size:9px;color:#8B96A0;">🔍 Search name, ID, offence, location...</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:10px;">
+          <thead>
+            <tr style="background:#F8FAFC;">
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">PHOTO</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">CASE ID ↕</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">SUBJECT ↕</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">RISK ▲</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">STATUS ↕</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">PRIMARY OFFENCE ↕</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">ORIGIN</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">CONV.</th>
+              <th style="padding:6px 10px;text-align:left;font-size:8px;font-weight:700;color:#8B96A0;letter-spacing:0.06em;border-bottom:1px solid #D9E1EA">LOCATION ↕</th>
+            </tr>
+          </thead>
+          <tbody id="s5-table">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- Callouts -->
+  <div class="callout" id="c5a" style="top:120px;left:145px;">
+    <div class="callout-box">Real-time crime category + risk breakdown</div>
+  </div>
+  <div class="callout" id="c5b" style="top:310px;left:145px;">
+    <div class="callout-box">All 105 records — sortable, searchable, read-only for analysts</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SCENE 6 — CLOSING
+══════════════════════════════════════ -->
+<div class="scene" id="s6">
+  <div class="restricted" style="position:absolute;top:0;left:0;right:0;background:#C62828;color:#fff;font-size:9px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;text-align:center;padding:5px;">Restricted — Authorised Personnel Only — NCIC Classified System</div>
+  <div class="close-flag fade-in" id="s6-flag">🇫🇯</div>
+  <div class="close-title fade-in" id="s6-title">Know More.<br>Act Faster.</div>
+  <div class="close-sub fade-in" id="s6-sub">Protect Fiji</div>
+  <div class="stats-row fade-in" id="s6-stats">
+    <div class="stat-item"><div class="stat-big">105</div><div class="stat-lbl">Active Case Profiles</div></div>
+    <div class="stat-item"><div class="stat-big">3</div><div class="stat-lbl">Access Role Levels</div></div>
+    <div class="stat-item"><div class="stat-big">7</div><div class="stat-lbl">Foreign Nationals Tracked</div></div>
+    <div class="stat-item"><div class="stat-big">24/7</div><div class="stat-lbl">Always Operational</div></div>
+  </div>
+  <div class="fade-in" id="s6-url">
+    <div class="url-badge">🌐 &nbsp;fiji-cci.vercel.app</div>
+  </div>
+  <div class="close-tagline fade-in" id="s6-tag" style="margin-top:20px">Proposed National Criminal Intelligence System · For Government Evaluation</div>
+</div>
+
+<script>
+const SCENES = [
+  {id:'s1', dur:4000, label:'1/6 — Intro'},
+  {id:'s2', dur:9000, label:'2/6 — Secure Login'},
+  {id:'s3', dur:8500, label:'3/6 — Admin Dashboard'},
+  {id:'s4', dur:5500, label:'4/6 — Officer Portal'},
+  {id:'s5', dur:8000, label:'5/6 — Analyst Intelligence'},
+  {id:'s6', dur:6000, label:'6/6 — Summary'},
+];
+const TOTAL = SCENES.reduce((a,s)=>a+s.dur,0);
+
+let currentScene = 0;
+let elapsed = 0;
+let sceneStart = 0;
+let rafId;
+
+// ── S1 Entry animations
+function animateS1(){
+  const items = ['s1-flag','s1-title','s1-sub','s1-div','s1-tag','s1-min'];
+  items.forEach((id,i)=>{
+    setTimeout(()=>{
+      const el = document.getElementById(id);
+      if(el){el.style.opacity='1';el.style.transform='translateY(0)';}
+    }, i*180);
+  });
+}
+
+// ── S2 Entry
+function animateS2(){
+  ['c2a','c2b','c2c','c2d','c2e'].forEach((id,i)=>{
+    setTimeout(()=>{
+      const el = document.getElementById(id);
+      if(el) el.classList.add('show');
+    }, 1500 + i*1300);
+  });
+}
+
+// ── S3 KPI counters
+function animateKPI(){
+  const targets = [3,57,47,3,7,105];
+  targets.forEach((target,i)=>{
+    const el = document.getElementById('k'+(i+1));
+    if(!el) return;
+    let v=0, step=Math.max(1,Math.round(target/20));
+    const iv = setInterval(()=>{
+      v=Math.min(v+step,target);
+      el.textContent=v;
+      if(v>=target) clearInterval(iv);
+    },40);
+  });
+
+  // Table rows
+  const rows = [
+    ['FJ-001','Koroi Seru','🇫🇯 Fijian','Male','risk-severe','Severe','st-custody','In Custody','Murder / Manslaughter','Suva','2025'],
+    ['FJ-004','Aiyaz Sayed-Khaiyum','🇫🇯 Fijian','Male','risk-high','High','st-invest','Under Investigation','Tax Evasion','Suva','2025'],
+    ['FJ-012','Justin Ho','🇫🇯 Fijian','Male','risk-severe','Severe','st-custody','In Custody','Drug Trafficking','Nadi','2025'],
+    ['FJ-026','Apisai Madigibuli','🇫🇯 Fijian','Male','risk-severe','Severe','','Sentence Completed','Murder / Manslaughter','Suva','2025'],
+    ['FJ-030','Tevita Kapawale','🇫🇯 Fijian','Male','risk-severe','Severe','st-custody','In Custody','Murder / Manslaughter','Suva','2025'],
+    ['FJ-043','Wang An','🌍 Foreign','Male','risk-severe','Severe','st-custody','In Custody','Drug Trafficking','Lautoka','2025'],
+    ['FJ-059','Aiyaz + Saneem','🇫🇯 Fijian','Male','risk-high','High','','Sentence Completed','Corruption / Fraud','Suva','2026'],
+    ['FJ-069','Fonta Laszlo','🌍 Foreign','Male','risk-severe','Severe','st-custody','In Custody','Drug Trafficking','Lautoka','2026'],
+  ];
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML='';
+  rows.forEach((r,i)=>{
+    setTimeout(()=>{
+      const tr = document.createElement('tr');
+      if(i===0) tr.className='highlight';
+      const isForeign = r[2].includes('Foreign');
+      tr.innerHTML = `
+        <td><div class="avatar">${r[1].split(' ').map(w=>w[0]).slice(0,2).join('')}</div></td>
+        <td style="font-family:monospace;font-size:9px;color:#8B96A0">${r[0]}</td>
+        <td style="font-weight:600">${r[1]}</td>
+        <td><span class="${isForeign?'type-foreign':'type-fijian'}">${r[2]}</span></td>
+        <td style="color:#5B6675">${r[3]}</td>
+        <td><span class="risk-pill ${r[4]}">● ${r[5]}</span></td>
+        <td><span class="status-pill ${r[6]}">${r[7]}</span></td>
+        <td style="color:#1B2A3B">${r[8]}</td>
+        <td style="color:#5B6675">${r[9]}</td>
+        <td style="font-family:monospace;color:#8B96A0">${r[10]}</td>`;
+      tbody.appendChild(tr);
+    }, i*100);
+  });
+
+  setTimeout(()=>{ document.getElementById('c3a').classList.add('show'); }, 1500);
+  setTimeout(()=>{ document.getElementById('c3b').classList.add('show'); }, 3000);
+  setTimeout(()=>{ document.getElementById('c3c').classList.add('show'); }, 4500);
+  setTimeout(()=>{ document.getElementById('c3d').classList.add('show'); }, 5800);
+}
+
+// ── S4 Entry
+function animateS4(){
+  setTimeout(()=>{ document.getElementById('c4a').classList.add('show'); }, 1500);
+  setTimeout(()=>{ document.getElementById('c4b').classList.add('show'); }, 3000);
+}
+
+// ── S5 Entry
+function animateS5(){
+  const s5rows = [
+    ['EN','FJ-026','Edward Nand','Severe','#C62828','In Custody','#5B6675','Murder / Manslaughter','Local','0','Suva'],
+    ['4M','FJ-007','40-year-old man (unnamed)','Severe','#C62828','In Custody','#5B6675','Murder / Manslaughter','Local','0','Suva'],
+    ['KS','FJ-001','Koroi Seru','Severe','#C62828','In Custody','#5B6675','Murder / Manslaughter','Local','1','Suva'],
+    ['AS','FJ-004','Aiyaz Sayed-Khaiyum','High','#F57C00','Under Investigation','#1565C0','Tax Evasion','Local','0','Suva'],
+    ['JH','FJ-012','Justin Ho','Severe','#C62828','In Custody','#5B6675','Drug Trafficking','Local','2','Nadi'],
+    ['WA','FJ-043','Wang An','Severe','#C62828','In Custody','#5B6675','Drug Trafficking','Foreign','0','Lautoka'],
+    ['TK','FJ-030','Tevita Kapawale','Severe','#C62828','In Custody','#5B6675','Murder / Manslaughter','Local','0','Suva'],
+    ['PS','FJ-028','Pranesh Sharma','Low','#2E7D32','In Custody','#5B6675','Cybercrime','Local','0','Suva'],
+  ];
+  const tbody = document.getElementById('s5-table');
+  if(tbody){ tbody.innerHTML='';
+    s5rows.forEach((r,i)=>{
+      setTimeout(()=>{
+        const tr = document.createElement('tr');
+        tr.style.borderBottom='1px solid #F0F4F8';
+        if(i===0) tr.style.background='#F8FAFC';
+        tr.innerHTML=`
+          <td style="padding:7px 10px"><div style="width:28px;height:28px;border-radius:4px;background:#0F274718;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0F2747">${r[0]}</div></td>
+          <td style="padding:7px 10px;font-family:monospace;font-size:9px;color:#8B96A0">${r[1]}</td>
+          <td style="padding:7px 10px;font-weight:600;color:#1B2A3B">${r[2]}</td>
+          <td style="padding:7px 10px"><span style="background:${r[4]}18;color:${r[4]};font-size:8px;font-weight:700;padding:2px 7px;border-radius:3px;">● ${r[3]}</span></td>
+          <td style="padding:7px 10px"><span style="background:${r[6]}18;color:${r[6]};font-size:8px;font-weight:600;padding:2px 8px;border-radius:10px;border:1px solid ${r[6]}40">${r[5]}</span></td>
+          <td style="padding:7px 10px;color:#1B2A3B;font-size:10px;"><span style="width:3px;height:10px;background:${r[4]};border-radius:1px;display:inline-block;margin-right:5px;vertical-align:middle"></span>${r[7]}</td>
+          <td style="padding:7px 10px;color:#5B6675;font-size:9px">${r[8]}</td>
+          <td style="padding:7px 10px;color:#5B6675;font-size:9px;text-align:center">${r[9]}</td>
+          <td style="padding:7px 10px;color:#5B6675;font-size:9px">${r[10]}</td>`;
+        tbody.appendChild(tr);
+      }, i*120);
+    });
+  }
+  setTimeout(()=>{ document.getElementById('c5a').classList.add('show'); }, 1800);
+  setTimeout(()=>{ document.getElementById('c5b').classList.add('show'); }, 4000);
+}
+
+// ── S6 Entry
+function animateS6(){
+  const items = ['s6-flag','s6-title','s6-sub','s6-stats','s6-url','s6-tag'];
+  items.forEach((id,i)=>{
+    setTimeout(()=>{
+      const el = document.getElementById(id);
+      if(el){el.style.opacity='1';el.style.transform='translateY(0)';}
+    }, i*250);
+  });
+  setTimeout(()=>{ document.getElementById('replay').style.display='block'; }, 4000);
+}
+
+const ENTER_FNS = [animateS1, animateS2, animateKPI, animateS4, animateS5, animateS6];
+
+function showScene(idx){
+  document.querySelectorAll('.scene').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.callout').forEach(c=>c.classList.remove('show'));
+  const sc = document.getElementById(SCENES[idx].id);
+  if(sc) sc.classList.add('active');
+  document.getElementById('scene-label').textContent = SCENES[idx].label;
+  if(ENTER_FNS[idx]) ENTER_FNS[idx]();
+  sceneStart = performance.now();
+}
+
+function tick(now){
+  const sinceStart = now - sceneStart;
+  const dur = SCENES[currentScene].dur;
+  // Progress bar
+  let totalElapsed = elapsed + sinceStart;
+  document.getElementById('progress-bar').style.width = Math.min(100, (totalElapsed/TOTAL)*100)+'%';
+  if(sinceStart >= dur){
+    elapsed += dur;
+    currentScene++;
+    if(currentScene >= SCENES.length){ return; }
+    showScene(currentScene);
+  }
+  rafId = requestAnimationFrame(tick);
+}
+
+// Start
+showScene(0);
+rafId = requestAnimationFrame(tick);
+</script>
+</body>
+</html>
