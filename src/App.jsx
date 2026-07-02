@@ -712,10 +712,11 @@ export default function App() {
   };
 
   useEffect(()=>{
+    if(!user) return;               // wait for an authenticated session before loading (RLS requires it)
     load();
     const ch=supabase.channel("changes").on("postgres_changes",{event:"*",schema:"public",table:"criminal_profiles"},load).subscribe();
     return()=>supabase.removeChannel(ch);
-  },[]);
+  },[user]);
 
   const filtered=db.filter(r=>{
     if(query&&!`${r.id} ${r.name} ${r.alias}`.toLowerCase().includes(query.toLowerCase()))return false;
